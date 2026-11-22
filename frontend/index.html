@@ -1,30 +1,2383 @@
 <!DOCTYPE html>
 <html lang="en">
-  <head>
-    <meta charset="UTF-8" />
-    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-    <title>NexusChat SKMD · Full-Stack React + Node/Socket.IO</title>
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>NexusChat SKMD · Complete Production Edition</title>
     <script src="https://cdn.tailwindcss.com"></script>
-    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.1/css/all.min.css" />
-    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet" />
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.1/css/all.min.css">
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+    <script>
+        /* Immediate global helpers defined before DOM renders */
+        window.toggleLargeTextMode = function () {
+            const isLarge = document.documentElement.classList.toggle('large-text-mode');
+            try { localStorage.setItem('nexuschat_large_text', isLarge ? '1' : '0'); } catch (e) {}
+            const btn = document.getElementById('fontZoomToggleBtn');
+            if (btn) {
+                btn.textContent = isLarge ? 'A-' : 'A+';
+                btn.classList.toggle('bg-amber-500/20', isLarge);
+                btn.classList.toggle('border-amber-400', isLarge);
+            }
+            if (typeof window.showToast === 'function') {
+                window.showToast(isLarge ? 'Large Clear Text Enabled (పెద్ద అక్షరాలు ఆన్)' : 'Standard Clear Text Restored');
+            }
+        };
+
+        window.toggleDisplayTheme = function () {
+            const isLight = document.documentElement.classList.toggle('light-day-theme');
+            try { localStorage.setItem('nexuschat_day_theme', isLight ? '1' : '0'); } catch (e) {}
+            const btn = document.getElementById('themeToggleBtn');
+            if (btn) {
+                btn.innerHTML = isLight
+                    ? '<i class="fa-solid fa-moon text-indigo-600"></i>'
+                    : '<i class="fa-solid fa-sun text-amber-300"></i>';
+            }
+            if (typeof window.showToast === 'function') {
+                window.showToast(isLight ? 'Daylight High-Visibility Mode On' : 'Dark Sleek Mode On');
+            }
+        };
+
+        window.switchSettingsTab = function (tab) {
+            ['profile', 'subscriptions', 'account', 'privacy', 'language'].forEach(t => {
+                const cap = t.charAt(0).toUpperCase() + t.slice(1);
+                const btn = document.getElementById('setTab' + cap);
+                const sec = document.getElementById('setSec' + cap);
+                if (btn) {
+                    btn.className = (t === tab)
+                        ? 'px-3.5 py-2 rounded-xl bg-blue-600 text-white text-xs font-bold transition shadow'
+                        : 'px-3.5 py-2 rounded-xl bg-slate-800 hover:bg-slate-700 text-slate-200 text-xs font-semibold transition';
+                }
+                if (sec) sec.classList.toggle('hidden', t !== tab);
+            });
+        };
+
+        window.openSettingsModal = function (defaultTab) {
+            const modal = document.getElementById('settingsModal');
+            if (modal) modal.classList.remove('hidden');
+            const topMenu = document.getElementById('mainTopDotsMenu');
+            if (topMenu) topMenu.classList.add('hidden');
+            if (typeof window.populateSettingsModal === 'function') {
+                window.populateSettingsModal();
+            }
+            window.switchSettingsTab(defaultTab || 'profile');
+        };
+
+        window.closeSettingsModal = function () {
+            const modal = document.getElementById('settingsModal');
+            if (modal) modal.classList.add('hidden');
+        };
+
+        try {
+            if (localStorage.getItem('nexuschat_large_text') === '1') {
+                document.documentElement.classList.add('large-text-mode');
+            }
+            if (localStorage.getItem('nexuschat_day_theme') === '1') {
+                document.documentElement.classList.add('light-day-theme');
+            }
+        } catch (e) {}
+    </script>
     <style>
-      html { font-size: 16px; font-family: 'Inter', sans-serif; }
-      html.large-text-mode { font-size: 18.5px; }
-      html.light-day-theme body { background-color: #f1f5f9; color: #0f172a; }
-      html.light-day-theme .bg-slate-950,
-      html.light-day-theme .bg-slate-900 { background-color: #ffffff !important; color: #0f172a !important; }
-      html.light-day-theme .bg-slate-800 { background-color: #e2e8f0 !important; color: #0f172a !important; }
-      html.light-day-theme .text-white,
-      html.light-day-theme .text-slate-100,
-      html.light-day-theme .text-slate-200 { color: #0f172a !important; }
-      html.light-day-theme .text-slate-300,
-      html.light-day-theme .text-slate-400 { color: #334155 !important; }
-      html.light-day-theme .border-slate-800,
-      html.light-day-theme .border-slate-700 { border-color: #cbd5e1 !important; }
+        html {
+            font-size: 16.5px;
+        }
+        html.large-text-mode {
+            font-size: 19px;
+        }
+        body {
+            font-family: 'Inter', sans-serif;
+            background-color: #090d16;
+            color: #f8fafc;
+            -webkit-font-smoothing: antialiased;
+        }
+        /* Crisp legibility upgrades */
+        .text-slate-400 { color: #cbd5e1 !important; }
+        .text-slate-500 { color: #94a3b8 !important; }
+
+        /* Daylight High-Visibility Theme overrides */
+        html.light-day-theme body {
+            background-color: #f1f5f9;
+            color: #0f172a;
+        }
+        html.light-day-theme .bg-slate-950,
+        html.light-day-theme .bg-slate-900,
+        html.light-day-theme .bg-slate-900\/95,
+        html.light-day-theme .bg-slate-900\/90,
+        html.light-day-theme .bg-slate-900\/85 {
+            background-color: #ffffff !important;
+            color: #0f172a !important;
+        }
+        html.light-day-theme .bg-slate-800,
+        html.light-day-theme .bg-slate-800\/90,
+        html.light-day-theme .bg-slate-800\/80 {
+            background-color: #e2e8f0 !important;
+            color: #0f172a !important;
+        }
+        html.light-day-theme .text-white,
+        html.light-day-theme .text-slate-100,
+        html.light-day-theme .text-slate-200 {
+            color: #0f172a !important;
+        }
+        html.light-day-theme .text-slate-300,
+        html.light-day-theme .text-slate-400,
+        html.light-day-theme .text-slate-500 {
+            color: #334155 !important;
+        }
+        html.light-day-theme .border-slate-800,
+        html.light-day-theme .border-slate-700,
+        html.light-day-theme .border-slate-600 {
+            border-color: #cbd5e1 !important;
+        }
+        html.light-day-theme #messagesContainer {
+            background-color: #e8eef5 !important;
+        }
+        html.light-day-theme .bg-emerald-600 .text-white,
+        html.light-day-theme .bg-emerald-600 {
+            color: #ffffff !important;
+        }
+
+        /* Custom sleek scrollbar */
+        ::-webkit-scrollbar { width: 7px; height: 7px; }
+        ::-webkit-scrollbar-track { background: rgba(15, 23, 42, 0.25); }
+        ::-webkit-scrollbar-thumb { background: rgba(100, 116, 139, 0.55); border-radius: 9999px; }
+        ::-webkit-scrollbar-thumb:hover { background: rgba(59, 130, 246, 0.85); }
+        .msg-bubble-in { animation: popIn 0.16s cubic-bezier(0.16, 1, 0.3, 1); }
+        @keyframes popIn {
+            0% { opacity: 0; transform: translateY(5px) scale(0.98); }
+            100% { opacity: 1; transform: translateY(0) scale(1); }
+        }
     </style>
-  </head>
-  <body class="bg-slate-950 text-slate-100 overflow-hidden">
-    <div id="root"></div>
-    <script type="module" src="/src/main.jsx"></script>
-  </body>
+</head>
+<body class="h-screen w-screen overflow-hidden flex flex-col select-none">
+
+    <!-- ==================== SYSTEM MAINTENANCE / FORCE UPDATE BANNER ==================== -->
+    <div id="globalSystemBanner" class="hidden bg-amber-500 text-slate-950 px-4 py-2 text-xs font-extrabold flex items-center justify-between gap-2 z-40 shrink-0 shadow">
+        <div class="flex items-center gap-2">
+            <i class="fa-solid fa-triangle-exclamation text-sm"></i>
+            <span id="globalSystemBannerText">NexusChat v2.4 Update Available — Please update for enhanced encryption & speed.</span>
+        </div>
+        <button onclick="showToast('Checking latest NexusChat package... You are on the latest build!')" class="px-3 py-1 rounded-lg bg-slate-950 text-amber-300 text-xs font-bold shrink-0">
+            Update Now
+        </button>
+    </div>
+
+    <!-- ==================== AUTHENTICATION & ROLE-ISOLATED LOGIN OVERLAY ==================== -->
+    <div id="authOverlay" class="fixed inset-0 z-50 bg-slate-950/95 backdrop-blur-xl flex items-center justify-center p-4 overflow-y-auto">
+        <div class="w-full max-w-md bg-slate-900 border border-slate-700 rounded-3xl p-6 sm:p-8 shadow-2xl">
+            <div class="flex items-center justify-between mb-5">
+                <div class="flex items-center gap-3">
+                    <div class="w-12 h-12 rounded-2xl bg-gradient-to-br from-blue-500 to-indigo-600 flex items-center justify-center text-white text-xl font-black shadow-lg">
+                        <i class="fa-solid fa-shield-halved"></i>
+                    </div>
+                    <div>
+                        <h1 class="text-xl font-extrabold text-white tracking-tight">NexusChat SKMD</h1>
+                        <p class="text-xs text-blue-400 font-semibold">End-to-End Encrypted Enterprise & Family</p>
+                    </div>
+                </div>
+                <button onclick="toggleDisplayTheme()" title="Switch Light / Dark Mode" class="w-10 h-10 rounded-xl bg-slate-800 hover:bg-slate-700 border border-slate-600 flex items-center justify-center text-amber-300">
+                    <i class="fa-solid fa-sun"></i>
+                </button>
+            </div>
+
+            <!-- Login Portal Mode Switcher: Regular User vs Developer -->
+            <div class="grid grid-cols-2 gap-2 p-1.5 bg-slate-800 rounded-2xl mb-5 border border-slate-700">
+                <button id="loginTabUser" onclick="switchLoginPortal('user')" class="py-2 rounded-xl bg-blue-600 text-white text-xs font-bold transition shadow">
+                    <i class="fa-solid fa-user mr-1"></i> User / Business Login
+                </button>
+                <button id="loginTabDev" onclick="switchLoginPortal('developer')" class="py-2 rounded-xl text-slate-300 hover:text-white text-xs font-bold transition">
+                    <i class="fa-solid fa-terminal mr-1"></i> Developer Login
+                </button>
+            </div>
+
+            <!-- REGULAR USER / BUSINESS LOGIN FORM -->
+            <div id="userLoginSection" class="space-y-4">
+                <div>
+                    <label class="block text-xs font-bold text-slate-300 mb-1.5">Your Name / Business Name</label>
+                    <input id="loginDisplayName" type="text" value="SKMD Admin" placeholder="Enter your name" class="w-full px-4 py-3 rounded-xl bg-slate-800 border border-slate-600 text-white text-sm font-medium focus:outline-none focus:border-blue-500">
+                </div>
+                <div>
+                    <label class="block text-xs font-bold text-slate-300 mb-1.5">Mobile Number (With Country Code)</label>
+                    <input id="loginPhoneInput" type="tel" value="+91 98480 12345" placeholder="+91 98480 12345" class="w-full px-4 py-3 rounded-xl bg-slate-800 border border-slate-600 text-white text-sm font-mono font-semibold focus:outline-none focus:border-blue-500">
+                </div>
+
+                <div id="otpVerifyBox" class="hidden space-y-2 p-3.5 rounded-2xl bg-slate-800/80 border border-blue-500/40">
+                    <div class="flex items-center justify-between">
+                        <span class="text-xs font-bold text-blue-400">6-Digit SMS Verification Code</span>
+                        <span class="text-[11px] text-slate-300 font-mono">Demo OTP: 123456</span>
+                    </div>
+                    <input id="loginOtpInput" type="text" maxlength="6" value="123456" placeholder="123456" class="w-full px-4 py-2.5 rounded-xl bg-slate-900 border border-slate-600 text-center text-lg font-mono font-extrabold tracking-widest text-white focus:outline-none focus:border-blue-500">
+                    <button onclick="verifyOTP()" class="w-full py-3 rounded-xl bg-blue-600 hover:bg-blue-500 text-white text-sm font-extrabold shadow-lg transition">
+                        Verify & Enter NexusChat
+                    </button>
+                </div>
+
+                <div id="requestOtpButtons" class="space-y-2.5 pt-1">
+                    <button onclick="requestOTP()" class="w-full py-3 rounded-xl bg-blue-600 hover:bg-blue-500 text-white text-sm font-extrabold shadow-lg transition">
+                        <i class="fa-solid fa-paper-plane mr-1.5"></i> Send SMS Verification Code
+                    </button>
+                    <button onclick="quickDemoLogin()" class="w-full py-3 rounded-xl bg-slate-800 hover:bg-slate-700 border border-slate-600 text-blue-300 text-sm font-bold transition">
+                        <i class="fa-solid fa-bolt mr-1.5"></i> Instant One-Click Enter (SKMD Admin)
+                    </button>
+                </div>
+            </div>
+
+            <!-- DEVELOPER / SUPER-ADMIN LOGIN FORM (Strictly Isolated) -->
+            <div id="developerLoginSection" class="hidden space-y-4">
+                <div class="p-3 rounded-xl bg-amber-500/10 border border-amber-500/40 text-xs text-amber-200 font-medium">
+                    <i class="fa-solid fa-lock mr-1 text-amber-400"></i> Restricted Super-Admin Gateway. Developer Options remain invisible to standard users.
+                </div>
+                <div>
+                    <label class="block text-xs font-bold text-slate-300 mb-1.5">Developer ID</label>
+                    <input id="devIdInput" type="text" value="DEV-OWNER-01" placeholder="DEV-OWNER-01" class="w-full px-4 py-3 rounded-xl bg-slate-800 border border-slate-600 text-white text-sm font-mono font-bold focus:outline-none focus:border-amber-500">
+                </div>
+                <div>
+                    <label class="block text-xs font-bold text-slate-300 mb-1.5">Master Developer Passkey</label>
+                    <input id="devPasskeyInput" type="password" value="123456" placeholder="••••••" class="w-full px-4 py-3 rounded-xl bg-slate-800 border border-slate-600 text-white text-sm font-mono font-bold focus:outline-none focus:border-amber-500">
+                </div>
+                <button onclick="loginAsDeveloper()" class="w-full py-3 rounded-xl bg-amber-500 hover:bg-amber-400 text-slate-950 text-sm font-extrabold shadow-lg transition">
+                    <i class="fa-solid fa-key mr-1.5"></i> Authenticate as Super-Admin Developer
+                </button>
+            </div>
+        </div>
+    </div>
+
+    <!-- ==================== APP LOCK OVERLAY ==================== -->
+    <div id="appLockOverlay" class="hidden fixed inset-0 z-50 bg-slate-950/95 backdrop-blur-xl flex items-center justify-center p-4">
+        <div class="w-full max-w-sm bg-slate-900 border border-slate-700 rounded-3xl p-6 text-center shadow-2xl space-y-4">
+            <div class="w-16 h-16 rounded-2xl bg-blue-500/20 border border-blue-500/40 text-blue-400 flex items-center justify-center text-2xl mx-auto">
+                <i class="fa-solid fa-fingerprint"></i>
+            </div>
+            <h2 class="text-lg font-extrabold text-white">NexusChat Locked</h2>
+            <p class="text-xs text-slate-300">Verify biometric touch or enter your 4-digit App Lock PIN (Default: <span class="font-mono font-bold text-blue-400">1234</span>)</p>
+            <input id="appLockPinInput" type="password" maxlength="6" placeholder="Enter PIN" class="w-full px-4 py-3 rounded-xl bg-slate-800 border border-slate-600 text-center text-lg font-mono font-extrabold tracking-widest text-white focus:outline-none focus:border-blue-500">
+            <div class="grid grid-cols-2 gap-2.5">
+                <button onclick="simulateBiometricUnlock()" class="py-3 rounded-xl bg-slate-800 hover:bg-slate-700 border border-slate-600 text-blue-300 text-xs font-bold">
+                    <i class="fa-solid fa-fingerprint mr-1"></i> Biometric
+                </button>
+                <button onclick="unlockAppWithPIN()" class="py-3 rounded-xl bg-blue-600 hover:bg-blue-500 text-white text-xs font-bold">
+                    <i class="fa-solid fa-unlock mr-1"></i> Unlock PIN
+                </button>
+            </div>
+        </div>
+    </div>
+
+    <!-- ==================== TOP GLOBAL NAVIGATION & UTILITY BAR ==================== -->
+    <header class="h-14 bg-slate-900 border-b border-slate-800 px-3 sm:px-5 flex items-center justify-between gap-2 shrink-0 z-30">
+        <div class="flex items-center gap-2.5 min-w-0">
+            <div class="w-9 h-9 rounded-xl bg-gradient-to-br from-blue-500 to-indigo-600 flex items-center justify-center text-white font-black text-base shadow shrink-0">
+                <i class="fa-solid fa-shield-halved"></i>
+            </div>
+            <div class="min-w-0">
+                <div class="flex items-center gap-2">
+                    <span class="font-extrabold text-sm sm:text-base text-white tracking-tight truncate">NexusChat</span>
+                    <span class="hidden md:inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-[11px] font-bold bg-blue-500/20 text-blue-300 border border-blue-500/30">
+                        <i class="fa-solid fa-lock text-[10px]"></i> E2EE
+                    </span>
+                </div>
+            </div>
+        </div>
+
+        <!-- Right Controls: Mode Switch, Font Zoom A+, Day/Night Theme, Active User Pill, Main 3-Dots -->
+        <div class="flex items-center gap-1.5 sm:gap-2">
+            <!-- Security Factor Mode Toggle -->
+            <button id="modeBadge" onclick="toggleSecurityMode()" title="Switch Single-Factor / Dual-Factor Security" class="hidden md:inline-flex items-center gap-1.5 px-3 py-1.5 rounded-full text-xs font-bold bg-indigo-500/20 hover:bg-indigo-500/30 text-indigo-200 border border-indigo-400/40 transition">
+                <i class="fa-solid fa-fingerprint"></i> Single-Factor
+            </button>
+
+            <!-- Font Zoom Toggle A+ -->
+            <button id="fontZoomToggleBtn" onclick="toggleLargeTextMode()" title="Increase / Reset Font Size" class="px-2.5 py-1.5 rounded-xl bg-slate-800 hover:bg-slate-700 text-amber-300 border border-slate-600 text-xs font-extrabold transition">
+                A+
+            </button>
+
+            <!-- Day / Dark Theme Toggle -->
+            <button id="themeToggleBtn" onclick="toggleDisplayTheme()" title="Switch Daylight / Dark Mode" class="w-9 h-9 rounded-xl bg-slate-800 hover:bg-slate-700 border border-slate-600 flex items-center justify-center text-amber-300 transition">
+                <i class="fa-solid fa-sun"></i>
+            </button>
+
+            <!-- App Lock Quick Button -->
+            <button onclick="lockApp()" title="Lock App Immediately" class="w-9 h-9 rounded-xl bg-slate-800 hover:bg-slate-700 border border-slate-600 flex items-center justify-center text-slate-200 transition">
+                <i class="fa-solid fa-lock text-xs"></i>
+            </button>
+
+            <!-- Logged-in User Profile Pill -->
+            <button onclick="openSettingsModal('profile')" title="View / Edit My Profile" class="flex items-center gap-2 bg-slate-800 hover:bg-slate-700 border border-slate-600 rounded-full pl-1.5 pr-3 py-1 transition max-w-[185px] sm:max-w-[240px]">
+                <img id="topBarUserAvatar" src="https://ui-avatars.com/api/?name=SKMD+Admin&background=2563eb&color=fff&bold=true" alt="Me" class="w-7 h-7 rounded-full object-cover border border-blue-400 shrink-0">
+                <div class="text-left min-w-0">
+                    <div id="topBarUserName" class="text-xs font-bold text-white truncate leading-tight">SKMD Admin</div>
+                    <div id="topBarUserPhone" class="text-[11px] text-blue-400 font-mono font-semibold truncate leading-tight">+91 98480 12345</div>
+                </div>
+            </button>
+
+            <!-- Main Top-Right 3-Dots Menu -->
+            <div class="relative">
+                <button id="mainTopDotsBtn" onclick="toggleMainTopDotsMenu(event)" title="More Options & Settings" class="w-9 h-9 rounded-xl bg-slate-800 hover:bg-slate-700 border border-slate-600 flex items-center justify-center text-white transition">
+                    <i class="fa-solid fa-ellipsis-vertical"></i>
+                </button>
+                <div id="mainTopDotsMenu" class="hidden absolute right-0 mt-2 w-64 bg-slate-900 border border-slate-700 rounded-2xl shadow-2xl py-2 z-50 text-xs font-semibold">
+                    <button onclick="openNewGroupModal()" class="w-full px-4 py-2.5 text-left hover:bg-slate-800 flex items-center gap-3 text-slate-100">
+                        <i class="fa-solid fa-users text-emerald-400 w-4"></i> New Group (Admin / Family)
+                    </button>
+                    <button onclick="openNewContactModal()" class="w-full px-4 py-2.5 text-left hover:bg-slate-800 flex items-center gap-3 text-slate-100">
+                        <i class="fa-solid fa-user-plus text-sky-400 w-4"></i> New Contact
+                    </button>
+                    <button onclick="openNewBroadcastModal()" class="w-full px-4 py-2.5 text-left hover:bg-slate-800 flex items-center gap-3 text-slate-100">
+                        <i class="fa-solid fa-bullhorn text-amber-400 w-4"></i> New Broadcast List
+                    </button>
+                    <button onclick="openLinkedDevicesModal()" class="w-full px-4 py-2.5 text-left hover:bg-slate-800 flex items-center gap-3 text-slate-100">
+                        <i class="fa-solid fa-laptop text-indigo-400 w-4"></i> Linked Devices (Web QR)
+                    </button>
+                    <button onclick="openStarredMessagesModal()" class="w-full px-4 py-2.5 text-left hover:bg-slate-800 flex items-center gap-3 text-slate-100">
+                        <i class="fa-solid fa-star text-yellow-400 w-4"></i> Starred Messages
+                    </button>
+                    <button onclick="openShareAppModal()" class="w-full px-4 py-2.5 text-left hover:bg-slate-800 flex items-center gap-3 text-slate-100">
+                        <i class="fa-solid fa-share-nodes text-teal-400 w-4"></i> Share / Download App
+                    </button>
+                    <!-- Role-Isolated Developer Options (Hidden for regular users) -->
+                    <button id="menuDeveloperOptionsBtn" onclick="openDeveloperOptionsModal()" class="hidden w-full px-4 py-2.5 text-left bg-amber-500/10 hover:bg-amber-500/20 flex items-center gap-3 text-amber-300 font-bold border-y border-amber-500/30 my-1">
+                        <i class="fa-solid fa-terminal text-amber-400 w-4"></i> Developer Options (Global)
+                    </button>
+                    <div class="border-t border-slate-800 my-1"></div>
+                    <button onclick="openSettingsModal('profile')" class="w-full px-4 py-2.5 text-left hover:bg-slate-800 flex items-center gap-3 text-slate-100">
+                        <i class="fa-solid fa-gear text-slate-300 w-4"></i> Settings (Profile, Privacy, Language)
+                    </button>
+                    <button onclick="logoutUser()" class="w-full px-4 py-2.5 text-left hover:bg-rose-950/60 flex items-center gap-3 text-rose-400">
+                        <i class="fa-solid fa-right-from-bracket w-4"></i> Log Out
+                    </button>
+                </div>
+            </div>
+        </div>
+    </header>
+
+    <!-- ==================== MAIN WORKSPACE: LEFT SIDEBAR + RIGHT CHAT AREA ==================== -->
+    <main class="flex-1 flex overflow-hidden relative">
+
+        <!-- LEFT SIDEBAR (Chats, Groups, Status, Calls) -->
+        <aside id="leftSidebarPanel" class="w-full md:w-88 lg:w-96 bg-slate-900 border-r border-slate-800 flex flex-col shrink-0">
+            <!-- Search & Secret Vault Bar -->
+            <div class="p-3 border-b border-slate-800 space-y-2.5">
+                <div class="relative flex items-center gap-2">
+                    <div class="relative flex-1">
+                        <i class="fa-solid fa-magnifying-glass absolute left-3.5 top-1/2 -translate-y-1/2 text-slate-400 text-xs"></i>
+                        <input id="chatSearchInput" oninput="handleChatSearch(this.value)" type="text" placeholder="Search chats or enter Vault PIN (9999)..." class="w-full pl-9 pr-3 py-2.5 rounded-xl bg-slate-800 border border-slate-700 text-xs sm:text-sm text-white placeholder-slate-400 focus:outline-none focus:border-emerald-500">
+                    </div>
+                    <button id="vaultBadgeBtn" onclick="toggleVaultMode()" title="Secret Hidden Vault" class="px-3 py-2.5 rounded-xl bg-slate-800 hover:bg-slate-700 border border-slate-700 text-xs font-bold text-slate-300 transition shrink-0">
+                        <i class="fa-solid fa-user-secret"></i>
+                    </button>
+                </div>
+
+                <!-- Navigation Filter Tabs -->
+                <div class="grid grid-cols-4 gap-1.5 bg-slate-800/80 p-1 rounded-xl border border-slate-700/70 text-xs font-bold">
+                    <button id="navTabAll" onclick="switchSidebarTab('all')" class="py-1.5 rounded-lg bg-blue-600 text-white transition">Chats</button>
+                    <button id="navTabGroups" onclick="switchSidebarTab('groups')" class="py-1.5 rounded-lg text-slate-300 hover:text-white transition">Groups</button>
+                    <button id="navTabStatus" onclick="switchSidebarTab('status')" class="py-1.5 rounded-lg text-slate-300 hover:text-white transition">Status</button>
+                    <button id="navTabCalls" onclick="switchSidebarTab('calls')" class="py-1.5 rounded-lg text-slate-300 hover:text-white transition">Calls</button>
+                </div>
+            </div>
+
+            <!-- Dynamic Sidebar List Container -->
+            <div id="sidebarListContainer" class="flex-1 overflow-y-auto divide-y divide-slate-800/70"></div>
+        </aside>
+
+        <!-- RIGHT CHAT CONVERSATION PANEL -->
+        <section id="chatAreaPanel" class="hidden md:flex flex-1 flex-col bg-slate-950 min-w-0 relative">
+
+            <!-- Active Chat Header -->
+            <div class="h-16 bg-slate-900 border-b border-slate-800 px-3 sm:px-5 flex items-center justify-between gap-2 shrink-0">
+                <div class="flex items-center gap-3 min-w-0">
+                    <button onclick="backToMobileSidebar()" class="md:hidden w-9 h-9 rounded-xl bg-slate-800 flex items-center justify-center text-white shrink-0">
+                        <i class="fa-solid fa-arrow-left"></i>
+                    </button>
+                    <img id="activeChatAvatar" src="https://ui-avatars.com/api/?name=SKMD+Distribution&background=059669&color=fff&bold=true" alt="Chat" class="w-10 h-10 rounded-full object-cover border border-emerald-500/50 shrink-0">
+                    <div class="min-w-0">
+                        <div class="flex items-center gap-2">
+                            <h2 id="activeChatTitle" class="text-sm sm:text-base font-extrabold text-white truncate">SKMD Distribution HQ</h2>
+                            <span id="activeChatBadge" class="px-2 py-0.5 rounded-full text-[10px] font-extrabold bg-blue-500/20 text-blue-300 border border-blue-500/40 shrink-0">ADMIN GROUP</span>
+                        </div>
+                        <p id="activeChatSubtitle" class="text-xs text-slate-300 truncate">Multi-Area Isolated Channels · E2EE Verified</p>
+                    </div>
+                </div>
+
+                <!-- Header Action Buttons -->
+                <div class="flex items-center gap-1.5 sm:gap-2 shrink-0">
+                    <!-- Family Group Voice & Video Quick Buttons -->
+                    <button id="btnGroupVoiceChat" onclick="startFamilyGroupVoiceChat()" class="hidden px-3 py-1.5 rounded-xl bg-emerald-600/20 hover:bg-emerald-600/30 text-emerald-300 border border-emerald-500/40 text-xs font-bold items-center gap-1.5">
+                        <i class="fa-solid fa-microphone-lines"></i> <span class="hidden sm:inline">Voice Chat</span>
+                    </button>
+                    <button id="btnGroupVideoCall" onclick="startWebRTCCall('video', true)" class="hidden px-3 py-1.5 rounded-xl bg-indigo-600/20 hover:bg-indigo-600/30 text-indigo-300 border border-indigo-500/40 text-xs font-bold items-center gap-1.5">
+                        <i class="fa-solid fa-video"></i> <span class="hidden sm:inline">Group Video</span>
+                    </button>
+
+                    <!-- Admin Group Manage Members & Orders -->
+                    <button id="btnGroupSettings" onclick="openGroupSettingsModal()" title="Manage Group Members & Areas" class="hidden w-9 h-9 rounded-xl bg-slate-800 hover:bg-slate-700 border border-slate-700 flex items-center justify-center text-emerald-300">
+                        <i class="fa-solid fa-users-gear"></i>
+                    </button>
+                    <button id="btnExportOrders" onclick="exportOrdersToCSV()" title="Export Area Orders to CSV" class="hidden w-9 h-9 rounded-xl bg-slate-800 hover:bg-slate-700 border border-slate-700 flex items-center justify-center text-amber-300">
+                        <i class="fa-solid fa-file-csv"></i>
+                    </button>
+
+                    <!-- Standard Voice & Video Call -->
+                    <button id="btnDirectAudioCall" onclick="startWebRTCCall('audio', false)" title="Encrypted Voice Call" class="w-9 h-9 rounded-xl bg-slate-800 hover:bg-slate-700 border border-slate-700 flex items-center justify-center text-slate-200">
+                        <i class="fa-solid fa-phone text-xs"></i>
+                    </button>
+                    <button id="btnDirectVideoCall" onclick="startWebRTCCall('video', false)" title="Encrypted Video Call" class="w-9 h-9 rounded-xl bg-slate-800 hover:bg-slate-700 border border-slate-700 flex items-center justify-center text-slate-200">
+                        <i class="fa-solid fa-video text-xs"></i>
+                    </button>
+                </div>
+            </div>
+
+            <!-- ADMIN GROUP MULTI-AREA ISOLATION BAR -->
+            <div id="adminAreaTabsBar" class="hidden bg-slate-900/90 border-b border-slate-800 px-3 py-2 flex items-center justify-between gap-2 overflow-x-auto shrink-0">
+                <div id="areaTabsList" class="flex items-center gap-1.5"></div>
+                <button onclick="addCustomAreaTab()" class="px-2.5 py-1 rounded-lg bg-slate-800 hover:bg-slate-700 border border-slate-600 text-xs font-bold text-emerald-300 shrink-0">
+                    + Area
+                </button>
+            </div>
+
+            <!-- FAMILY LIVE GROUP VOICE ROOM BANNER -->
+            <div id="familyVoiceRoomBar" class="hidden bg-emerald-950/90 border-b border-emerald-700/50 px-4 py-2.5 flex items-center justify-between gap-3 shrink-0">
+                <div class="flex items-center gap-3 min-w-0">
+                    <span class="w-3 h-3 rounded-full bg-emerald-400 animate-ping shrink-0"></span>
+                    <div class="min-w-0">
+                        <div class="text-xs font-extrabold text-emerald-200">Live Family Voice Room Active (4 Connected)</div>
+                        <div class="text-[11px] text-emerald-300/90 truncate">Amma, Nanna, Ravi, You · Speaking now...</div>
+                    </div>
+                </div>
+                <div class="flex items-center gap-2 shrink-0">
+                    <button id="voiceRoomMuteBtn" onclick="toggleVoiceRoomMute()" class="px-3 py-1.5 rounded-xl bg-slate-800 text-white text-xs font-bold border border-slate-600">
+                        <i class="fa-solid fa-microphone"></i> Mute
+                    </button>
+                    <button onclick="leaveFamilyGroupVoiceChat()" class="px-3 py-1.5 rounded-xl bg-rose-600 hover:bg-rose-500 text-white text-xs font-bold">
+                        Leave
+                    </button>
+                </div>
+            </div>
+
+            <!-- MESSAGES SCROLL VIEWPORT -->
+            <div id="messagesContainer" class="flex-1 overflow-y-auto p-4 sm:p-6 space-y-3 bg-slate-950"></div>
+
+            <!-- READ-ONLY OFFICIAL CHANNEL FOOTER (Shown when viewing NexusChat Official) -->
+            <div id="officialChannelFooter" class="hidden bg-slate-900 border-t border-slate-800 p-3.5 text-center text-xs font-semibold text-slate-300 shrink-0">
+                <i class="fa-solid fa-circle-check text-sky-400 mr-1"></i> Official Verified Announcements Channel · Only <span class="text-white font-bold">NexusChat Official ✓</span> can post updates here.
+            </div>
+
+            <!-- MESSAGE COMPOSER & ATTACHMENT TOOLBAR -->
+            <div id="chatComposerBar" class="bg-slate-900 border-t border-slate-800 p-3 shrink-0 relative">
+                <!-- Attachment Popover Menu -->
+                <div id="attachmentMenu" class="hidden absolute bottom-16 left-3 w-64 bg-slate-900 border border-slate-700 rounded-2xl shadow-2xl py-2 z-40 text-xs font-semibold">
+                    <button onclick="triggerGalleryUpload(false)" class="w-full px-4 py-2.5 text-left hover:bg-slate-800 flex items-center gap-3 text-slate-100">
+                        <i class="fa-solid fa-image text-emerald-400 w-4"></i> Photo / Video Gallery
+                    </button>
+                    <button onclick="triggerGalleryUpload(true)" class="w-full px-4 py-2.5 text-left hover:bg-slate-800 flex items-center gap-3 text-slate-100">
+                        <i class="fa-solid fa-eye-slash text-amber-400 w-4"></i> ① View Once Photo (Disappears)
+                    </button>
+                    <button onclick="triggerDocumentUpload()" class="w-full px-4 py-2.5 text-left hover:bg-slate-800 flex items-center gap-3 text-slate-100">
+                        <i class="fa-solid fa-file-lines text-sky-400 w-4"></i> Document (PDF, Excel, Word, Image)
+                    </button>
+                    <button onclick="openLocationPickerModal()" class="w-full px-4 py-2.5 text-left hover:bg-slate-800 flex items-center gap-3 text-slate-100">
+                        <i class="fa-solid fa-location-dot text-rose-400 w-4"></i> Share Location (Live / Current)
+                    </button>
+                    <button onclick="openUpiRequestModal()" class="w-full px-4 py-2.5 text-left hover:bg-slate-800 flex items-center gap-3 text-slate-100">
+                        <i class="fa-solid fa-qrcode text-indigo-400 w-4"></i> Request UPI Payment / QR
+                    </button>
+                    <button onclick="openPollModal()" class="w-full px-4 py-2.5 text-left hover:bg-slate-800 flex items-center gap-3 text-slate-100">
+                        <i class="fa-solid fa-square-poll-vertical text-teal-400 w-4"></i> Create Stock / Order Poll
+                    </button>
+                    <div class="border-t border-slate-800 my-1"></div>
+                    <button onclick="openStickerTabFromAttachment()" class="w-full px-4 py-2.5 text-left hover:bg-slate-800 flex items-center gap-3 text-pink-300 font-bold">
+                        <i class="fa-solid fa-note-sticky text-pink-400 w-4"></i> Send Sticker
+                    </button>
+                </div>
+
+                <!-- Emoji & Sticker Popover -->
+                <div id="emojiStickerPopover" class="hidden absolute bottom-16 left-12 w-72 bg-slate-900 border border-slate-700 rounded-2xl shadow-2xl p-3 z-40">
+                    <div class="grid grid-cols-2 gap-1.5 bg-slate-800 p-1 rounded-xl mb-2.5 text-xs font-bold">
+                        <button id="tabBtnEmojis" onclick="switchEmojiStickerTab('emojis')" class="py-1.5 rounded-lg bg-emerald-600 text-white">😊 Emojis</button>
+                        <button id="tabBtnStickers" onclick="switchEmojiStickerTab('stickers')" class="py-1.5 rounded-lg text-slate-300">🏷️ Stickers</button>
+                    </div>
+                    <div id="emojiGridPanel" class="grid grid-cols-6 gap-1.5 text-xl text-center"></div>
+                    <div id="stickerGridPanel" class="hidden grid grid-cols-2 gap-2"></div>
+                </div>
+
+                <!-- Hidden File Inputs -->
+                <input id="hiddenMediaInput" type="file" accept="image/*,video/*" class="hidden" onchange="handleMediaFileSelected(event)">
+                <input id="hiddenDocInput" type="file" accept="*/*" class="hidden" onchange="handleDocFileSelected(event)">
+
+                <div class="flex items-center gap-2">
+                    <button onclick="toggleAttachmentMenu(event)" title="Attach Photo, View Once, Document, UPI QR, Sticker" class="w-10 h-10 rounded-xl bg-slate-800 hover:bg-slate-700 border border-slate-700 flex items-center justify-center text-slate-200 shrink-0">
+                        <i class="fa-solid fa-paperclip"></i>
+                    </button>
+                    <button onclick="toggleEmojiStickerPopover(event)" title="Emojis & Stickers" class="w-10 h-10 rounded-xl bg-slate-800 hover:bg-slate-700 border border-slate-700 flex items-center justify-center text-amber-300 shrink-0">
+                        <i class="fa-regular fa-face-smile text-base"></i>
+                    </button>
+                    <input id="messageInput" onkeydown="if(event.key==='Enter') sendMessage()" type="text" placeholder="Type an encrypted message..." class="flex-1 px-4 py-2.5 rounded-xl bg-slate-800 border border-slate-700 text-sm text-white placeholder-slate-400 focus:outline-none focus:border-emerald-500">
+                    <button onclick="openScheduleMessageModal()" title="Schedule Message" class="w-10 h-10 rounded-xl bg-slate-800 hover:bg-slate-700 border border-slate-700 flex items-center justify-center text-sky-300 shrink-0">
+                        <i class="fa-regular fa-clock"></i>
+                    </button>
+                    <button onclick="sendQuickVoiceNote()" title="Send Voice Note" class="w-10 h-10 rounded-xl bg-slate-800 hover:bg-slate-700 border border-slate-700 flex items-center justify-center text-emerald-300 shrink-0">
+                        <i class="fa-solid fa-microphone"></i>
+                    </button>
+                    <button onclick="sendMessage()" title="Send Message" class="px-4 h-10 rounded-xl bg-blue-600 hover:bg-blue-500 text-white font-bold text-sm flex items-center gap-1.5 shadow shrink-0">
+                        <span>Send</span> <i class="fa-solid fa-paper-plane text-xs"></i>
+                    </button>
+                </div>
+            </div>
+        </section>
+    </main>
+
+    <!-- ==================== COMPREHENSIVE SETTINGS MODAL ==================== -->
+    <div id="settingsModal" class="hidden fixed inset-0 z-50 bg-slate-950/85 backdrop-blur-md flex items-center justify-center p-3 sm:p-5">
+        <div class="w-full max-w-2xl bg-slate-900 border border-slate-700 rounded-3xl shadow-2xl flex flex-col max-h-[90vh] overflow-hidden">
+            <div class="px-5 py-4 border-b border-slate-800 flex items-center justify-between">
+                <h3 class="text-base sm:text-lg font-extrabold text-white"><i class="fa-solid fa-gear text-emerald-400 mr-2"></i>NexusChat Settings</h3>
+                <button onclick="closeSettingsModal()" class="w-9 h-9 rounded-xl bg-slate-800 hover:bg-slate-700 text-slate-300 flex items-center justify-center">
+                    <i class="fa-solid fa-xmark"></i>
+                </button>
+            </div>
+
+            <!-- Settings Navigation Pills -->
+            <div class="px-5 py-3 border-b border-slate-800 flex items-center gap-2 overflow-x-auto shrink-0">
+                <button id="setTabProfile" onclick="switchSettingsTab('profile')" class="px-3.5 py-2 rounded-xl bg-emerald-600 text-white text-xs font-bold">Profile & Gmail</button>
+                <button id="setTabSubscriptions" onclick="switchSettingsTab('subscriptions')" class="px-3.5 py-2 rounded-xl bg-slate-800 text-slate-200 text-xs font-semibold">Subscriptions</button>
+                <button id="setTabAccount" onclick="switchSettingsTab('account')" class="px-3.5 py-2 rounded-xl bg-slate-800 text-slate-200 text-xs font-semibold">Account</button>
+                <button id="setTabPrivacy" onclick="switchSettingsTab('privacy')" class="px-3.5 py-2 rounded-xl bg-slate-800 text-slate-200 text-xs font-semibold">Privacy & Lock</button>
+                <button id="setTabLanguage" onclick="switchSettingsTab('language')" class="px-3.5 py-2 rounded-xl bg-slate-800 text-slate-200 text-xs font-semibold">Language</button>
+            </div>
+
+            <!-- Settings Content Body -->
+            <div class="p-5 overflow-y-auto space-y-4 text-xs sm:text-sm">
+                <!-- 1. PROFILE & GMAIL BACKUP -->
+                <div id="setSecProfile" class="space-y-4">
+                    <div class="flex items-center gap-4 p-4 rounded-2xl bg-slate-800/80 border border-slate-700">
+                        <img id="settingsProfileAvatar" src="https://ui-avatars.com/api/?name=SKMD+Admin&background=10b981&color=fff&bold=true" alt="Profile" class="w-16 h-16 rounded-full object-cover border-2 border-emerald-400">
+                        <div class="space-y-1.5">
+                            <div class="font-extrabold text-white text-base" id="settingsProfileHeading">SKMD Admin</div>
+                            <button onclick="cycleProfileAvatar()" class="px-3 py-1.5 rounded-xl bg-emerald-600 hover:bg-emerald-500 text-white text-xs font-bold">
+                                Change Profile Photo
+                            </button>
+                        </div>
+                    </div>
+                    <div class="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                        <div>
+                            <label class="block text-xs font-bold text-slate-300 mb-1">Display Name</label>
+                            <input id="setProfileName" type="text" class="w-full px-3.5 py-2.5 rounded-xl bg-slate-800 border border-slate-600 text-white font-semibold">
+                        </div>
+                        <div>
+                            <label class="block text-xs font-bold text-slate-300 mb-1">Registered Phone</label>
+                            <input id="setProfilePhone" type="text" class="w-full px-3.5 py-2.5 rounded-xl bg-slate-800 border border-slate-600 text-emerald-300 font-mono font-semibold">
+                        </div>
+                    </div>
+                    <div>
+                        <label class="block text-xs font-bold text-slate-300 mb-1">About / Business Tagline</label>
+                        <input id="setProfileAbout" type="text" class="w-full px-3.5 py-2.5 rounded-xl bg-slate-800 border border-slate-600 text-white">
+                    </div>
+                    <div class="p-4 rounded-2xl bg-slate-800/70 border border-slate-700 space-y-2.5">
+                        <div class="flex items-center justify-between">
+                            <span class="font-bold text-white"><i class="fa-brands fa-google text-amber-400 mr-1.5"></i>Gmail Backup ID Verification</span>
+                            <span id="gmailVerifiedBadge" class="px-2.5 py-0.5 rounded-full text-[11px] font-bold bg-emerald-500/20 text-emerald-300">Verified</span>
+                        </div>
+                        <div class="flex gap-2">
+                            <input id="setProfileGmail" type="email" placeholder="yourname@gmail.com" class="flex-1 px-3.5 py-2 rounded-xl bg-slate-900 border border-slate-600 text-white text-xs">
+                            <button onclick="verifyGmailBackup()" class="px-4 py-2 rounded-xl bg-sky-600 hover:bg-sky-500 text-white text-xs font-bold">Verify & Backup</button>
+                        </div>
+                    </div>
+                    <button onclick="saveProfileSettings()" class="w-full py-3 rounded-xl bg-emerald-600 hover:bg-emerald-500 text-white font-extrabold">Save Profile Changes</button>
+                </div>
+
+                <!-- 2. SUBSCRIPTIONS -->
+                <div id="setSecSubscriptions" class="hidden space-y-3">
+                    <div class="p-4 rounded-2xl bg-gradient-to-r from-emerald-900/60 to-teal-900/60 border border-emerald-500/40">
+                        <div class="text-xs font-bold text-emerald-300 uppercase">Current Plan</div>
+                        <div class="text-lg font-extrabold text-white mt-0.5" id="currentPlanLabel">NexusChat Business Pro (Active)</div>
+                        <p class="text-xs text-slate-200 mt-1">Includes Unlimited Multi-Area Admin Groups, CSV Order Export, & Priority Cloud Backup.</p>
+                    </div>
+                    <div class="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                        <div class="p-4 rounded-2xl bg-slate-800 border border-slate-700 space-y-2">
+                            <div class="font-extrabold text-white">Pro Business · ₹499/mo</div>
+                            <p class="text-xs text-slate-300">Up to 15 Area Channels, UPI QR Cards & Scheduled Broadcasts.</p>
+                            <button onclick="selectSubscriptionPlan('Pro Business (₹499/mo)')" class="w-full py-2 rounded-xl bg-emerald-600 text-white text-xs font-bold">Activate Pro</button>
+                        </div>
+                        <div class="p-4 rounded-2xl bg-slate-800 border border-amber-500/40 space-y-2">
+                            <div class="font-extrabold text-amber-300">Enterprise Global · ₹1,499/mo</div>
+                            <p class="text-xs text-slate-300">Unlimited Areas, Verified Badge, & Multi-Device Desktop Sync.</p>
+                            <button onclick="selectSubscriptionPlan('Enterprise Global (₹1,499/mo)')" class="w-full py-2 rounded-xl bg-amber-500 text-slate-950 text-xs font-extrabold">Upgrade Enterprise</button>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- 3. ACCOUNT -->
+                <div id="setSecAccount" class="hidden space-y-3">
+                    <div class="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                        <div class="p-3.5 rounded-2xl bg-slate-800 border border-slate-700 flex items-center justify-between">
+                            <div>
+                                <div class="font-bold text-white">Passkey & Biometric Login</div>
+                                <div class="text-xs text-slate-300">Hardware-backed device passkey</div>
+                            </div>
+                            <input type="checkbox" checked onchange="showToast('Passkey preference updated')" class="w-5 h-5 accent-emerald-500">
+                        </div>
+                        <div class="p-3.5 rounded-2xl bg-slate-800 border border-slate-700 flex items-center justify-between">
+                            <div>
+                                <div class="font-bold text-white">Two-Step Verification (2FA)</div>
+                                <div class="text-xs text-slate-300">Require 6-digit PIN on new devices</div>
+                            </div>
+                            <input type="checkbox" checked onchange="showToast('2FA security status updated')" class="w-5 h-5 accent-emerald-500">
+                        </div>
+                        <div class="p-3.5 rounded-2xl bg-slate-800 border border-slate-700 flex items-center justify-between">
+                            <div>
+                                <div class="font-bold text-white">Security Key Notifications</div>
+                                <div class="text-xs text-slate-300">Alert when E2EE safety number changes</div>
+                            </div>
+                            <input type="checkbox" checked onchange="showToast('Security notifications updated')" class="w-5 h-5 accent-emerald-500">
+                        </div>
+                        <div class="p-3.5 rounded-2xl bg-slate-800 border border-slate-700">
+                            <div class="font-bold text-white mb-1">Public @Username</div>
+                            <input id="setAccountUsername" type="text" value="@skmd_official" class="w-full px-3 py-1.5 rounded-lg bg-slate-900 border border-slate-600 text-xs text-emerald-300 font-mono">
+                        </div>
+                    </div>
+                    <button onclick="showToast('Account security settings saved!')" class="w-full py-2.5 rounded-xl bg-emerald-600 text-white font-bold text-xs">Save Account Security</button>
+                </div>
+
+                <!-- 4. PRIVACY & APP LOCK -->
+                <div id="setSecPrivacy" class="hidden space-y-3">
+                    <div class="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                        <div>
+                            <label class="block text-xs font-bold text-slate-300 mb-1">Last Seen & Online</label>
+                            <select id="privLastSeen" class="w-full px-3 py-2.5 rounded-xl bg-slate-800 border border-slate-600 text-white text-xs">
+                                <option value="contacts">My Contacts Only</option>
+                                <option value="everyone">Everyone</option>
+                                <option value="nobody">Nobody</option>
+                            </select>
+                        </div>
+                        <div>
+                            <label class="block text-xs font-bold text-slate-300 mb-1">Profile Picture Visibility</label>
+                            <select id="privPhoto" class="w-full px-3 py-2.5 rounded-xl bg-slate-800 border border-slate-600 text-white text-xs">
+                                <option value="everyone">Everyone</option>
+                                <option value="contacts">Saved Contacts Only</option>
+                                <option value="nobody">Nobody</option>
+                            </select>
+                        </div>
+                        <div>
+                            <label class="block text-xs font-bold text-slate-300 mb-1">About Info Visibility</label>
+                            <select id="privAbout" class="w-full px-3 py-2.5 rounded-xl bg-slate-800 border border-slate-600 text-white text-xs">
+                                <option value="contacts">My Contacts</option>
+                                <option value="everyone">Everyone</option>
+                                <option value="nobody">Nobody</option>
+                            </select>
+                        </div>
+                        <div>
+                            <label class="block text-xs font-bold text-slate-300 mb-1">Status Updates Privacy</label>
+                            <select id="privStatus" class="w-full px-3 py-2.5 rounded-xl bg-slate-800 border border-slate-600 text-white text-xs">
+                                <option value="contacts">My Contacts</option>
+                                <option value="except">Contacts Except Blocked</option>
+                            </select>
+                        </div>
+                    </div>
+                    <div class="p-3.5 rounded-2xl bg-slate-800 border border-slate-700 flex flex-col sm:flex-row sm:items-center justify-between gap-2">
+                        <div>
+                            <div class="font-bold text-white">App Lock Prompt</div>
+                            <div class="text-xs text-slate-300">Ask for Biometric / PIN when opening app</div>
+                        </div>
+                        <select id="privAppLock" class="px-3 py-2 rounded-xl bg-slate-900 border border-slate-600 text-white text-xs font-bold">
+                            <option value="off">Off (Manual Lock)</option>
+                            <option value="every">Ask Every Time on Open</option>
+                        </select>
+                    </div>
+                    <button onclick="savePrivacySettings()" class="w-full py-2.5 rounded-xl bg-emerald-600 text-white font-bold text-xs">Save Privacy & App Lock</button>
+                </div>
+
+                <!-- 5. APP LANGUAGE -->
+                <div id="setSecLanguage" class="hidden space-y-3">
+                    <p class="text-xs text-slate-300">Select your preferred interface & message translation language:</p>
+                    <div id="languageOptionsGrid" class="grid grid-cols-2 sm:grid-cols-3 gap-2.5"></div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- ==================== SUPER-ADMIN DEVELOPER OPTIONS MODAL ==================== -->
+    <div id="developerOptionsModal" class="hidden fixed inset-0 z-50 bg-slate-950/90 backdrop-blur-md flex items-center justify-center p-3 sm:p-5">
+        <div class="w-full max-w-3xl bg-slate-900 border border-amber-500/50 rounded-3xl shadow-2xl flex flex-col max-h-[90vh] overflow-hidden">
+            <div class="px-5 py-4 bg-amber-500/10 border-b border-amber-500/30 flex items-center justify-between">
+                <div class="flex items-center gap-2.5">
+                    <i class="fa-solid fa-terminal text-amber-400 text-lg"></i>
+                    <div>
+                        <h3 class="text-base font-extrabold text-white">Developer Super-Admin Console</h3>
+                        <p class="text-xs text-amber-300">Global System Broadcasts (`NexusChat Official ✓`), Maintenance & User Governance</p>
+                    </div>
+                </div>
+                <button onclick="closeDeveloperOptionsModal()" class="w-9 h-9 rounded-xl bg-slate-800 hover:bg-slate-700 text-slate-200 flex items-center justify-center">
+                    <i class="fa-solid fa-xmark"></i>
+                </button>
+            </div>
+
+            <!-- Developer Tabs -->
+            <div class="px-5 py-3 border-b border-slate-800 flex items-center gap-2 overflow-x-auto shrink-0">
+                <button id="devSubTabBroadcast" onclick="switchDevConsoleTab('broadcast')" class="px-3.5 py-2 rounded-xl bg-amber-500 text-slate-950 text-xs font-extrabold">Global Broadcast</button>
+                <button id="devSubTabControls" onclick="switchDevConsoleTab('controls')" class="px-3.5 py-2 rounded-xl bg-slate-800 text-slate-200 text-xs font-bold">Maintenance & Ban</button>
+                <button id="devSubTabLogs" onclick="switchDevConsoleTab('logs')" class="px-3.5 py-2 rounded-xl bg-slate-800 text-slate-200 text-xs font-bold">Broadcast Logs</button>
+            </div>
+
+            <div class="p-5 overflow-y-auto space-y-4">
+                <!-- TAB 1: GLOBAL COUNTRY & STATE SYSTEM BROADCAST -->
+                <div id="devPanelBroadcast" class="space-y-4">
+                    <div class="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                        <div>
+                            <label class="block text-xs font-bold text-slate-300 mb-1">1. Target Country (Worldwide)</label>
+                            <select id="devTargetCountry" onchange="handleDevCountryChange()" class="w-full px-3.5 py-2.5 rounded-xl bg-slate-800 border border-slate-600 text-white text-xs font-bold"></select>
+                        </div>
+                        <div>
+                            <label class="block text-xs font-bold text-slate-300 mb-1">2. Target State / Province</label>
+                            <select id="devTargetState" onchange="updateDevTargetReachBadge()" class="w-full px-3.5 py-2.5 rounded-xl bg-slate-800 border border-slate-600 text-white text-xs font-bold"></select>
+                        </div>
+                    </div>
+
+                    <div id="devStateBreakdownGrid" class="grid grid-cols-2 sm:grid-cols-3 gap-2"></div>
+
+                    <div class="p-3.5 rounded-2xl bg-sky-950/50 border border-sky-500/40 flex items-center justify-between">
+                        <span class="text-xs font-bold text-sky-200">Direct System Fan-Out Reach (No Saved Number Needed):</span>
+                        <span id="devSelectedReachCount" class="px-3 py-1 rounded-full bg-sky-500 text-slate-950 text-xs font-extrabold">3,42,900 Users</span>
+                    </div>
+
+                    <div>
+                        <label class="block text-xs font-bold text-slate-300 mb-1">Official Announcement Message (Sent from <span class="text-sky-400">NexusChat Official ✓</span>)</label>
+                        <textarea id="devBroadcastMessageInput" rows="3" placeholder="Type official platform announcement, feature update, or security alert..." class="w-full p-3.5 rounded-xl bg-slate-800 border border-slate-600 text-sm text-white focus:outline-none focus:border-amber-500"></textarea>
+                    </div>
+
+                    <button onclick="sendOfficialSystemBroadcast()" class="w-full py-3 rounded-xl bg-amber-500 hover:bg-amber-400 text-slate-950 text-sm font-extrabold shadow-lg">
+                        <i class="fa-solid fa-tower-broadcast mr-1.5"></i> Push Official Broadcast Now
+                    </button>
+                </div>
+
+                <!-- TAB 2: MAINTENANCE BANNER & ACCOUNT BAN -->
+                <div id="devPanelControls" class="hidden space-y-4">
+                    <div class="p-4 rounded-2xl bg-slate-800 border border-slate-700 space-y-3">
+                        <div class="flex items-center justify-between">
+                            <div>
+                                <div class="font-extrabold text-white text-sm">Force App Update / Maintenance Banner</div>
+                                <div class="text-xs text-slate-300">Displays an urgent top alert bar to all active users</div>
+                            </div>
+                            <input id="devBannerToggle" type="checkbox" onchange="toggleSystemBannerFromDev(this.checked)" class="w-5 h-5 accent-amber-500">
+                        </div>
+                        <input id="devBannerCustomText" type="text" value="NexusChat v2.4 Update Available — Please update for enhanced encryption & speed." class="w-full px-3.5 py-2 rounded-xl bg-slate-900 border border-slate-600 text-xs text-white">
+                    </div>
+
+                    <div class="p-4 rounded-2xl bg-slate-800 border border-slate-700 space-y-3">
+                        <div class="font-extrabold text-white text-sm">Suspend / Unban Spam Account</div>
+                        <div class="flex gap-2">
+                            <input id="devBanPhoneInput" type="text" placeholder="+91 90000 00000" class="flex-1 px-3.5 py-2 rounded-xl bg-slate-900 border border-slate-600 text-xs text-white font-mono">
+                            <button onclick="suspendPhoneNumber()" class="px-4 py-2 rounded-xl bg-rose-600 hover:bg-rose-500 text-white text-xs font-bold">Suspend</button>
+                        </div>
+                        <div id="suspendedNumbersList" class="space-y-1.5 text-xs"></div>
+                    </div>
+                </div>
+
+                <!-- TAB 3: BROADCAST DELIVERY LOGS -->
+                <div id="devPanelLogs" class="hidden space-y-2.5"></div>
+            </div>
+        </div>
+    </div>
+
+    <!-- ==================== AUXILIARY MODALS (New Group, Contact, Broadcast, Linked Devices, Share, UPI, Schedule, Poll, Call, Lightbox) ==================== -->
+    <div id="genericActionModal" class="hidden fixed inset-0 z-50 bg-slate-950/85 backdrop-blur-md flex items-center justify-center p-4">
+        <div class="w-full max-w-md bg-slate-900 border border-slate-700 rounded-3xl shadow-2xl overflow-hidden">
+            <div class="px-5 py-4 border-b border-slate-800 flex items-center justify-between">
+                <h3 id="genericModalTitle" class="text-base font-extrabold text-white">Action</h3>
+                <button onclick="closeGenericModal()" class="w-8 h-8 rounded-xl bg-slate-800 text-slate-300 flex items-center justify-center">
+                    <i class="fa-solid fa-xmark"></i>
+                </button>
+            </div>
+            <div id="genericModalBody" class="p-5 space-y-3 text-xs sm:text-sm max-h-[75vh] overflow-y-auto"></div>
+        </div>
+    </div>
+
+    <!-- WEBRTC CALL OVERLAY -->
+    <div id="webrtcCallOverlay" class="hidden fixed inset-0 z-50 bg-slate-950/95 backdrop-blur-xl flex flex-col items-center justify-between p-6">
+        <div class="text-center space-y-1 mt-6">
+            <span class="px-3 py-1 rounded-full bg-emerald-500/20 text-emerald-300 text-xs font-bold border border-emerald-500/40">
+                <i class="fa-solid fa-lock mr-1"></i> End-to-End Encrypted Call
+            </span>
+            <h2 id="callParticipantName" class="text-2xl font-extrabold text-white pt-2">SKMD Distribution</h2>
+            <p id="callStatusTimer" class="text-sm text-emerald-400 font-mono font-bold">00:01 · Connected</p>
+        </div>
+
+        <div id="callVideoGrid" class="w-full max-w-3xl grid grid-cols-2 gap-3 my-auto"></div>
+
+        <div class="flex items-center gap-4 mb-6">
+            <button onclick="showToast('Microphone toggled')" class="w-14 h-14 rounded-full bg-slate-800 hover:bg-slate-700 text-white text-lg flex items-center justify-center border border-slate-600">
+                <i class="fa-solid fa-microphone"></i>
+            </button>
+            <button onclick="endWebRTCCall()" class="w-16 h-16 rounded-full bg-rose-600 hover:bg-rose-500 text-white text-xl flex items-center justify-center shadow-xl">
+                <i class="fa-solid fa-phone-slash"></i>
+            </button>
+            <button onclick="showToast('Camera toggled')" class="w-14 h-14 rounded-full bg-slate-800 hover:bg-slate-700 text-white text-lg flex items-center justify-center border border-slate-600">
+                <i class="fa-solid fa-video"></i>
+            </button>
+        </div>
+    </div>
+
+    <!-- VIEW-ONCE / IMAGE LIGHTBOX -->
+    <div id="imageLightboxModal" class="hidden fixed inset-0 z-50 bg-slate-950/95 flex flex-col items-center justify-center p-4">
+        <div class="w-full max-w-lg bg-slate-900 border border-slate-700 rounded-3xl overflow-hidden shadow-2xl">
+            <div class="px-4 py-3 border-b border-slate-800 flex items-center justify-between">
+                <span id="lightboxCaption" class="text-xs font-extrabold text-amber-300">Media Preview</span>
+                <button onclick="closeLightbox()" class="px-3 py-1 rounded-lg bg-slate-800 text-white text-xs font-bold">Close</button>
+            </div>
+            <div class="p-4 flex items-center justify-center bg-black">
+                <img id="lightboxImage" src="" alt="Preview" class="max-h-[65vh] rounded-xl object-contain">
+            </div>
+        </div>
+    </div>
+
+    <!-- TOAST NOTIFICATION -->
+    <div id="toastBanner" class="hidden fixed bottom-5 left-1/2 -translate-x-1/2 z-50 px-5 py-3 rounded-2xl bg-slate-900 border border-emerald-500/60 text-white text-xs sm:text-sm font-bold shadow-2xl flex items-center gap-2.5">
+        <i class="fa-solid fa-circle-check text-emerald-400"></i>
+        <span id="toastText">Notification</span>
+    </div>
+
+    <!-- ==================== COMPLETE APPLICATION LOGIC ==================== -->
+    <script>
+        const GLOBAL_USER_DIRECTORY = {
+            'Worldwide': {
+                total: '3,42,900',
+                states: {
+                    'All Regions Worldwide': '3,42,900',
+                    'India': '2,14,850',
+                    'United States': '46,320',
+                    'United Arab Emirates': '28,940',
+                    'United Kingdom': '19,450',
+                    'Singapore': '12,180',
+                    'Canada': '9,640',
+                    'Australia': '6,820',
+                    'Saudi Arabia': '4,700'
+                }
+            },
+            'India': {
+                total: '2,14,850',
+                states: {
+                    'All India States': '2,14,850',
+                    'Andhra Pradesh': '48,620',
+                    'Telangana': '39,410',
+                    'Tamil Nadu': '26,180',
+                    'Karnataka': '24,950',
+                    'Maharashtra': '22,340',
+                    'Gujarat': '15,720',
+                    'Kerala': '12,480',
+                    'Delhi NCR': '11,290',
+                    'West Bengal': '7,640',
+                    'Uttar Pradesh': '6,220'
+                }
+            },
+            'United States': {
+                total: '46,320',
+                states: {
+                    'All US States': '46,320',
+                    'California': '12,480',
+                    'Texas': '9,850',
+                    'New Jersey': '8,120',
+                    'New York': '7,490',
+                    'Illinois': '4,380',
+                    'Washington': '4,000'
+                }
+            },
+            'United Arab Emirates': {
+                total: '28,940',
+                states: {
+                    'All Emirates': '28,940',
+                    'Dubai': '16,420',
+                    'Abu Dhabi': '7,890',
+                    'Sharjah': '4,630'
+                }
+            },
+            'United Kingdom': {
+                total: '19,450',
+                states: {
+                    'All UK Regions': '19,450',
+                    'London': '11,200',
+                    'Birmingham': '4,450',
+                    'Manchester': '3,800'
+                }
+            }
+        };
+
+        const APP_LANGUAGES = [
+            { code: 'en', name: 'English', native: 'English' },
+            { code: 'te', name: 'Telugu', native: 'తెలుగు' },
+            { code: 'hi', name: 'Hindi', native: 'हिन्दी' },
+            { code: 'ta', name: 'Tamil', native: 'தமிழ்' },
+            { code: 'kn', name: 'Kannada', native: 'ಕನ್ನಡ' },
+            { code: 'ml', name: 'Malayalam', native: 'മലയാളം' },
+            { code: 'mr', name: 'Marathi', native: 'मराठी' },
+            { code: 'gu', name: 'Gujarati', native: 'ગુજરાતી' },
+            { code: 'bn', name: 'Bengali', native: 'বাংলা' },
+            { code: 'pa', name: 'Punjabi', native: 'ਪੰਜਾਬੀ' }
+        ];
+
+        const DEFAULT_APP_STATE = {
+            isAuthenticated: false,
+            isDeveloper: false,
+            developerId: '',
+            securityMode: 'single',
+            sidebarTab: 'all',
+            vaultUnlocked: false,
+            vaultPin: '9999',
+            appLockPin: '1234',
+            activeChatId: 'chat_admin_hq',
+            activeAreaTab: 'All Areas',
+            customAreas: ['All Areas', 'Vijayawada', 'Guntur', 'Narsaraopet'],
+            selectedLanguage: 'en',
+            systemBanner: {
+                enabled: false,
+                text: 'NexusChat v2.4 Update Available — Please update for enhanced encryption & speed.'
+            },
+            suspendedNumbers: ['+91 91111 22222'],
+            devBroadcastLogs: [
+                { id: 'log1', region: 'India · Andhra Pradesh', reach: '48,620 Users', text: 'Welcome to NexusChat SKMD Enterprise v2.4!', time: 'Yesterday, 09:30 AM', readRate: '94%' }
+            ],
+            profile: {
+                name: 'SKMD Admin',
+                phone: '+91 98480 12345',
+                about: 'SKMD Wholesale & Distribution · Fast Dispatch',
+                gmail: 'skmd.hq@gmail.com',
+                avatarIndex: 0
+            },
+            privacy: {
+                lastSeen: 'contacts',
+                photo: 'everyone',
+                about: 'contacts',
+                status: 'contacts',
+                appLock: 'off'
+            },
+            statuses: [
+                { id: 'st1', author: 'SKMD Admin (You)', time: 'Today, 09:15 AM', text: 'Fresh morning dispatch started for Vijayawada & Guntur routes! 🚚', color: 'from-emerald-600 to-teal-700' },
+                { id: 'st2', author: 'Ramesh Traders (Vijayawada)', time: 'Today, 08:40 AM', text: 'Morning stock received in full. Ready for weekend orders.', color: 'from-indigo-600 to-sky-700' }
+            ],
+            chats: [
+                {
+                    id: 'chat_official',
+                    title: 'NexusChat Official ✓',
+                    type: 'official',
+                    verified: true,
+                    hiddenInVault: false,
+                    avatar: 'https://ui-avatars.com/api/?name=Nexus+Official&background=0284c7&color=fff&bold=true',
+                    subtitle: 'Verified Global System Announcements',
+                    unread: 1,
+                    messages: [
+                        { id: 'm_off_1', sender: 'NexusChat Official ✓', mine: false, area: 'All Areas', type: 'text', text: 'Welcome to NexusChat! Your messages, documents, and calls are protected with end-to-end encryption.', time: '09:00 AM', starred: true }
+                    ]
+                },
+                {
+                    id: 'chat_admin_hq',
+                    title: 'SKMD Distribution HQ',
+                    type: 'admin_group',
+                    hiddenInVault: false,
+                    avatar: 'https://ui-avatars.com/api/?name=SKMD+HQ&background=059669&color=fff&bold=true',
+                    subtitle: 'Multi-Area Isolated Channels · 48 Members',
+                    members: ['Ramesh Traders (Vijayawada)', 'Sri Lakshmi Stores (Guntur)', 'Balaji Agencies (Narsaraopet)', 'Venkateswara Mart (Guntur)'],
+                    unread: 2,
+                    messages: [
+                        { id: 'm1', sender: 'SKMD Admin', mine: true, area: 'All Areas', type: 'text', text: 'Good morning team! Common price list updated for all branches. Area-specific orders stay private inside each area tab.', time: '09:10 AM', ts: Date.now() - 3600000, starred: true },
+                        { id: 'm2', sender: 'Ramesh Traders', mine: false, area: 'Vijayawada', type: 'text', text: 'Vijayawada Indent: 45 Boxes Oil & 30 Bags Rice needed by 2 PM.', time: '09:22 AM', ts: Date.now() - 1800000, starred: false },
+                        { id: 'm3', sender: 'Sri Lakshmi Stores', mine: false, area: 'Guntur', type: 'text', text: 'Guntur Indent: 60 Boxes + invoice copy attached.', time: '09:28 AM', ts: Date.now() - 900000, starred: false },
+                        { id: 'm4', sender: 'Balaji Agencies', mine: false, area: 'Narsaraopet', type: 'text', text: 'Narsaraopet Route: Vehicle reached market yard safely.', time: '09:35 AM', ts: Date.now() - 600000, starred: false }
+                    ]
+                },
+                {
+                    id: 'chat_family',
+                    title: 'SKMD Family Group ❤️',
+                    type: 'family_group',
+                    hiddenInVault: false,
+                    avatar: 'https://ui-avatars.com/api/?name=Family+Group&background=e11d48&color=fff&bold=true',
+                    subtitle: 'Amma, Nanna, Ravi, Priya, You',
+                    unread: 1,
+                    messages: [
+                        { id: 'mf1', sender: 'Amma', mine: false, area: 'All Areas', type: 'text', text: 'Everyone join the evening family voice chat at 8 PM! ❤️', time: '09:45 AM', ts: Date.now() - 300000, starred: true }
+                    ]
+                },
+                {
+                    id: 'chat_ramesh',
+                    title: 'Ramesh Traders (Vijayawada)',
+                    type: 'direct',
+                    hiddenInVault: false,
+                    avatar: 'https://ui-avatars.com/api/?name=Ramesh+Traders&background=4f46e5&color=fff&bold=true',
+                    subtitle: 'Online · Vijayawada Distributor',
+                    unread: 0,
+                    messages: [
+                        { id: 'mr1', sender: 'Ramesh Traders', mine: false, area: 'All Areas', type: 'text', text: 'Sir, please send the UPI QR for yesterday balance ₹24,500.', time: '10:05 AM', ts: Date.now() - 120000, starred: false }
+                    ]
+                },
+                {
+                    id: 'chat_vault_vip',
+                    title: 'VIP Audit & Ledger Vault',
+                    type: 'direct',
+                    hiddenInVault: true,
+                    avatar: 'https://ui-avatars.com/api/?name=VIP+Vault&background=7c3aed&color=fff&bold=true',
+                    subtitle: 'Hidden Vault Chat · PIN Protected',
+                    unread: 0,
+                    messages: [
+                        { id: 'mv1', sender: 'SKMD Admin', mine: true, area: 'All Areas', type: 'text', text: 'Confidential Q4 distributor margin sheet stored securely in Vault.', time: 'Yesterday', ts: Date.now() - 86400000, starred: true }
+                    ]
+                }
+            ]
+        };
+
+        let APP_STATE = loadAppState();
+        let pendingViewOnceFlag = false;
+        let callTimerInterval = null;
+        let callSeconds = 0;
+
+        function loadAppState() {
+            try {
+                const raw = localStorage.getItem('nexuschat_skmd_complete_v1');
+                if (!raw) return JSON.parse(JSON.stringify(DEFAULT_APP_STATE));
+                const parsed = JSON.parse(raw);
+                return {
+                    ...JSON.parse(JSON.stringify(DEFAULT_APP_STATE)),
+                    ...parsed,
+                    profile: { ...DEFAULT_APP_STATE.profile, ...(parsed.profile || {}) },
+                    privacy: { ...DEFAULT_APP_STATE.privacy, ...(parsed.privacy || {}) },
+                    systemBanner: { ...DEFAULT_APP_STATE.systemBanner, ...(parsed.systemBanner || {}) }
+                };
+            } catch (e) {
+                return JSON.parse(JSON.stringify(DEFAULT_APP_STATE));
+            }
+        }
+
+        function saveAppState() {
+            try {
+                localStorage.setItem('nexuschat_skmd_complete_v1', JSON.stringify(APP_STATE));
+            } catch (e) {}
+        }
+
+        function showToast(msg) {
+            const banner = document.getElementById('toastBanner');
+            const text = document.getElementById('toastText');
+            if (!banner || !text) return;
+            text.textContent = msg;
+            banner.classList.remove('hidden');
+            clearTimeout(window._toastTimer);
+            window._toastTimer = setTimeout(() => banner.classList.add('hidden'), 3200);
+        }
+
+        /* ================= AUTHENTICATION & ROLE ISOLATION ================= */
+        function switchLoginPortal(portal) {
+            const isDev = portal === 'developer';
+            document.getElementById('userLoginSection').classList.toggle('hidden', isDev);
+            document.getElementById('developerLoginSection').classList.toggle('hidden', !isDev);
+            document.getElementById('loginTabUser').className = !isDev
+                ? 'py-2 rounded-xl bg-blue-600 text-white text-xs font-bold transition shadow'
+                : 'py-2 rounded-xl text-slate-300 hover:text-white text-xs font-bold transition';
+            document.getElementById('loginTabDev').className = isDev
+                ? 'py-2 rounded-xl bg-amber-500 text-slate-950 text-xs font-extrabold transition shadow'
+                : 'py-2 rounded-xl text-slate-300 hover:text-white text-xs font-bold transition';
+        }
+
+        function requestOTP() {
+            const phone = document.getElementById('loginPhoneInput').value.trim();
+            if (!phone) return showToast('Please enter a valid mobile number');
+            if (APP_STATE.suspendedNumbers.includes(phone)) {
+                return showToast('Access Denied: This number has been suspended by NexusChat Admin.');
+            }
+            document.getElementById('requestOtpButtons').classList.add('hidden');
+            document.getElementById('otpVerifyBox').classList.remove('hidden');
+            showToast('6-digit SMS code sent to ' + phone);
+        }
+
+        function verifyOTP() {
+            const otp = document.getElementById('loginOtpInput').value.trim();
+            if (otp.length < 4) return showToast('Enter valid 6-digit OTP (123456)');
+            completeUserLogin();
+        }
+
+        function quickDemoLogin() {
+            completeUserLogin();
+        }
+
+        function completeUserLogin() {
+            const nameInput = document.getElementById('loginDisplayName').value.trim() || 'SKMD Admin';
+            const phoneInput = document.getElementById('loginPhoneInput').value.trim() || '+91 98480 12345';
+            if (APP_STATE.suspendedNumbers.includes(phoneInput)) {
+                return showToast('Access Denied: This number is suspended.');
+            }
+            APP_STATE.isAuthenticated = true;
+            APP_STATE.isDeveloper = false;
+            APP_STATE.developerId = '';
+            APP_STATE.profile.name = nameInput === 'NexusChat Developer' ? 'SKMD Admin' : nameInput;
+            APP_STATE.profile.phone = phoneInput;
+            saveAppState();
+            document.getElementById('authOverlay').classList.add('hidden');
+            applyRoleVisibilityAndUI();
+            showToast('Welcome ' + APP_STATE.profile.name + '!');
+        }
+
+        function loginAsDeveloper() {
+            const devId = document.getElementById('devIdInput').value.trim();
+            const pass = document.getElementById('devPasskeyInput').value.trim();
+            if (!devId || pass !== '123456') {
+                return showToast('Invalid Developer ID or Master Passkey (Use 123456)');
+            }
+            APP_STATE.isAuthenticated = true;
+            APP_STATE.isDeveloper = true;
+            APP_STATE.developerId = devId;
+            APP_STATE.profile.name = 'NexusChat Developer (' + devId + ')';
+            saveAppState();
+            document.getElementById('authOverlay').classList.add('hidden');
+            applyRoleVisibilityAndUI();
+            showToast('Super-Admin Developer Session Unlocked');
+        }
+
+        function logoutUser() {
+            APP_STATE.isAuthenticated = false;
+            APP_STATE.isDeveloper = false;
+            APP_STATE.developerId = '';
+            saveAppState();
+            closeSettingsModal();
+            closeDeveloperOptionsModal();
+            document.getElementById('mainTopDotsMenu').classList.add('hidden');
+            document.getElementById('authOverlay').classList.remove('hidden');
+            switchLoginPortal('user');
+            document.getElementById('requestOtpButtons').classList.remove('hidden');
+            document.getElementById('otpVerifyBox').classList.add('hidden');
+            showToast('Logged out securely');
+        }
+
+        function applyRoleVisibilityAndUI() {
+            const devMenuBtn = document.getElementById('menuDeveloperOptionsBtn');
+            if (devMenuBtn) {
+                devMenuBtn.classList.toggle('hidden', !APP_STATE.isDeveloper);
+            }
+            syncProfileHeaderUI();
+            syncSystemBannerUI();
+            renderSidebarList();
+            renderActiveChat();
+        }
+
+        function syncProfileHeaderUI() {
+            const avatarUrl = `https://ui-avatars.com/api/?name=${encodeURIComponent(APP_STATE.profile.name)}&background=2563eb&color=fff&bold=true`;
+            const topAvatar = document.getElementById('topBarUserAvatar');
+            const topName = document.getElementById('topBarUserName');
+            const topPhone = document.getElementById('topBarUserPhone');
+            if (topAvatar) topAvatar.src = avatarUrl;
+            if (topName) topName.textContent = APP_STATE.profile.name;
+            if (topPhone) topPhone.textContent = APP_STATE.profile.phone;
+        }
+
+        function syncSystemBannerUI() {
+            const banner = document.getElementById('globalSystemBanner');
+            const text = document.getElementById('globalSystemBannerText');
+            if (!banner || !text) return;
+            text.textContent = APP_STATE.systemBanner.text;
+            banner.classList.toggle('hidden', !APP_STATE.systemBanner.enabled);
+        }
+
+        /* ================= APP LOCK & SECURITY MODE ================= */
+        function lockApp() {
+            document.getElementById('appLockPinInput').value = '';
+            document.getElementById('appLockOverlay').classList.remove('hidden');
+        }
+
+        function simulateBiometricUnlock() {
+            document.getElementById('appLockOverlay').classList.add('hidden');
+            showToast('Biometric Verified · App Unlocked');
+        }
+
+        function unlockAppWithPIN() {
+            const pin = document.getElementById('appLockPinInput').value.trim();
+            if (pin === APP_STATE.appLockPin || pin === '1234') {
+                document.getElementById('appLockOverlay').classList.add('hidden');
+                showToast('PIN Verified · App Unlocked');
+            } else {
+                showToast('Incorrect PIN (Default is 1234)');
+            }
+        }
+
+        function toggleSecurityMode() {
+            APP_STATE.securityMode = APP_STATE.securityMode === 'single' ? 'dual' : 'single';
+            saveAppState();
+            const badge = document.getElementById('modeBadge');
+            if (badge) {
+                badge.innerHTML = APP_STATE.securityMode === 'dual'
+                    ? '<i class="fa-solid fa-shield-halved"></i> Dual-Factor (Bio+PIN)'
+                    : '<i class="fa-solid fa-fingerprint"></i> Single-Factor';
+            }
+            showToast('Security Mode switched to ' + APP_STATE.securityMode.toUpperCase());
+        }
+
+        /* ================= TOP 3-DOTS MENU & VAULT SEARCH ================= */
+        function toggleMainTopDotsMenu(e) {
+            if (e) e.stopPropagation();
+            const menu = document.getElementById('mainTopDotsMenu');
+            menu.classList.toggle('hidden');
+            const devBtn = document.getElementById('menuDeveloperOptionsBtn');
+            if (devBtn) devBtn.classList.toggle('hidden', !APP_STATE.isDeveloper);
+        }
+
+        document.addEventListener('click', (e) => {
+            const topMenu = document.getElementById('mainTopDotsMenu');
+            const topBtn = document.getElementById('mainTopDotsBtn');
+            if (topMenu && !topMenu.contains(e.target) && topBtn && !topBtn.contains(e.target)) {
+                topMenu.classList.add('hidden');
+            }
+            const attMenu = document.getElementById('attachmentMenu');
+            if (attMenu && !attMenu.contains(e.target) && !e.target.closest('[onclick*="toggleAttachmentMenu"]')) {
+                attMenu.classList.add('hidden');
+            }
+            const emoPop = document.getElementById('emojiStickerPopover');
+            if (emoPop && !emoPop.contains(e.target) && !e.target.closest('[onclick*="toggleEmojiStickerPopover"]')) {
+                emoPop.classList.add('hidden');
+            }
+        });
+
+        function handleChatSearch(query) {
+            const q = query.trim();
+            if (q === APP_STATE.vaultPin) {
+                APP_STATE.vaultUnlocked = true;
+                document.getElementById('chatSearchInput').value = '';
+                document.getElementById('vaultBadgeBtn').classList.add('bg-purple-600', 'text-white');
+                showToast('Secret Hidden Vault Unlocked!');
+            }
+            renderSidebarList(q === APP_STATE.vaultPin ? '' : q);
+        }
+
+        function toggleVaultMode() {
+            if (!APP_STATE.vaultUnlocked) {
+                showToast('Enter Vault PIN (9999) in the Search Box to unlock hidden chats');
+                document.getElementById('chatSearchInput').focus();
+                return;
+            }
+            APP_STATE.vaultUnlocked = false;
+            document.getElementById('vaultBadgeBtn').classList.remove('bg-purple-600', 'text-white');
+            if (APP_STATE.activeChatId === 'chat_vault_vip') {
+                APP_STATE.activeChatId = 'chat_admin_hq';
+            }
+            renderSidebarList();
+            renderActiveChat();
+            showToast('Secret Vault Locked & Hidden');
+        }
+
+        /* ================= SIDEBAR TABS & RENDERING ================= */
+        function switchSidebarTab(tab) {
+            APP_STATE.sidebarTab = tab;
+            ['all', 'groups', 'status', 'calls'].forEach(t => {
+                const cap = t.charAt(0).toUpperCase() + t.slice(1);
+                const btn = document.getElementById('navTab' + cap);
+                if (btn) {
+                    btn.className = (t === tab)
+                        ? 'py-1.5 rounded-lg bg-blue-600 text-white transition'
+                        : 'py-1.5 rounded-lg text-slate-300 hover:text-white transition';
+                }
+            });
+            renderSidebarList();
+        }
+
+        function renderSidebarList(searchFilter = '') {
+            const container = document.getElementById('sidebarListContainer');
+            if (!container) return;
+
+            if (APP_STATE.sidebarTab === 'status') {
+                container.innerHTML = `
+                    <div class="p-4 space-y-3">
+                        <div class="p-3.5 rounded-2xl bg-slate-800/90 border border-slate-700 space-y-2.5">
+                            <div class="text-xs font-extrabold text-emerald-400">Post New Status Update</div>
+                            <input id="newStatusInput" type="text" placeholder="Share dispatch status or update..." class="w-full px-3 py-2 rounded-xl bg-slate-900 border border-slate-600 text-xs text-white">
+                            <button onclick="postNewStatus()" class="w-full py-2 rounded-xl bg-emerald-600 hover:bg-emerald-500 text-white text-xs font-bold">
+                                <i class="fa-solid fa-plus mr-1"></i> Publish Status
+                            </button>
+                        </div>
+                        <div class="text-xs font-bold text-slate-400 uppercase px-1">Recent Updates</div>
+                        ${APP_STATE.statuses.map(st => `
+                            <div class="p-3.5 rounded-2xl bg-gradient-to-r ${st.color} text-white shadow space-y-1">
+                                <div class="flex items-center justify-between text-xs font-extrabold">
+                                    <span>${st.author}</span>
+                                    <span class="text-[11px] opacity-85">${st.time}</span>
+                                </div>
+                                <p class="text-xs font-medium leading-relaxed">${st.text}</p>
+                            </div>
+                        `).join('')}
+                    </div>
+                `;
+                return;
+            }
+
+            if (APP_STATE.sidebarTab === 'calls') {
+                container.innerHTML = `
+                    <div class="p-4 space-y-2.5">
+                        <div class="text-xs font-bold text-slate-400 uppercase px-1">Encrypted Call History</div>
+                        <div class="p-3.5 rounded-2xl bg-slate-800/80 border border-slate-700 flex items-center justify-between">
+                            <div>
+                                <div class="text-xs font-extrabold text-white">SKMD Family Group ❤️</div>
+                                <div class="text-[11px] text-emerald-400">Group Video Call · Today, 08:15 AM</div>
+                            </div>
+                            <button onclick="startWebRTCCall('video', true)" class="w-9 h-9 rounded-xl bg-emerald-600 text-white flex items-center justify-center"><i class="fa-solid fa-video text-xs"></i></button>
+                        </div>
+                        <div class="p-3.5 rounded-2xl bg-slate-800/80 border border-slate-700 flex items-center justify-between">
+                            <div>
+                                <div class="text-xs font-extrabold text-white">Ramesh Traders (Vijayawada)</div>
+                                <div class="text-[11px] text-slate-300">Outgoing Voice Call · Yesterday</div>
+                            </div>
+                            <button onclick="startWebRTCCall('audio', false)" class="w-9 h-9 rounded-xl bg-slate-700 text-emerald-300 flex items-center justify-center"><i class="fa-solid fa-phone text-xs"></i></button>
+                        </div>
+                    </div>
+                `;
+                return;
+            }
+
+            const q = searchFilter.toLowerCase();
+            const filtered = APP_STATE.chats.filter(c => {
+                if (c.hiddenInVault && !APP_STATE.vaultUnlocked) return false;
+                if (APP_STATE.sidebarTab === 'groups' && !c.type.includes('group')) return false;
+                if (q && !c.title.toLowerCase().includes(q) && !c.subtitle.toLowerCase().includes(q)) return false;
+                return true;
+            });
+
+            container.innerHTML = filtered.map(chat => {
+                const isActive = chat.id === APP_STATE.activeChatId;
+                const lastMsg = chat.messages[chat.messages.length - 1];
+                const preview = lastMsg ? lastMsg.text : chat.subtitle;
+                return `
+                    <div onclick="selectChat('${chat.id}')" class="p-3.5 flex items-center gap-3 cursor-pointer transition ${isActive ? 'bg-blue-600/20 border-l-4 border-blue-500' : 'hover:bg-slate-800/60'}">
+                        <img src="${chat.avatar}" alt="${chat.title}" class="w-11 h-11 rounded-full object-cover shrink-0 border border-slate-700">
+                        <div class="flex-1 min-w-0">
+                            <div class="flex items-center justify-between gap-1">
+                                <div class="font-extrabold text-xs sm:text-sm text-white truncate flex items-center gap-1.5">
+                                    <span>${chat.title}</span>
+                                    ${chat.hiddenInVault ? '<span class="px-1.5 py-0.5 rounded bg-purple-500/20 text-purple-300 text-[10px]">VAULT</span>' : ''}
+                                </div>
+                                <span class="text-[11px] text-slate-400 shrink-0">${lastMsg ? lastMsg.time : ''}</span>
+                            </div>
+                            <div class="flex items-center justify-between gap-2 mt-0.5">
+                                <p class="text-xs text-slate-300 truncate">${preview}</p>
+                                ${chat.unread > 0 ? `<span class="px-2 py-0.5 rounded-full bg-blue-500 text-white text-[10px] font-extrabold shrink-0">${chat.unread}</span>` : ''}
+                            </div>
+                        </div>
+                    </div>
+                `;
+            }).join('');
+        }
+
+        function postNewStatus() {
+            const input = document.getElementById('newStatusInput');
+            const text = input.value.trim();
+            if (!text) return showToast('Enter status text first');
+            APP_STATE.statuses.unshift({
+                id: 'st_' + Date.now(),
+                author: APP_STATE.profile.name + ' (You)',
+                time: 'Just now',
+                text,
+                color: 'from-emerald-600 to-teal-700'
+            });
+            saveAppState();
+            renderSidebarList();
+            showToast('Status published!');
+        }
+
+        function selectChat(chatId) {
+            APP_STATE.activeChatId = chatId;
+            const chat = APP_STATE.chats.find(c => c.id === chatId);
+            if (chat) chat.unread = 0;
+            saveAppState();
+            renderSidebarList();
+            renderActiveChat();
+
+            // Responsive mobile switch
+            if (window.innerWidth < 768) {
+                document.getElementById('leftSidebarPanel').classList.add('hidden');
+                document.getElementById('chatAreaPanel').classList.remove('hidden');
+                document.getElementById('chatAreaPanel').classList.add('flex');
+            }
+        }
+
+        function backToMobileSidebar() {
+            document.getElementById('chatAreaPanel').classList.add('hidden');
+            document.getElementById('chatAreaPanel').classList.remove('flex');
+            document.getElementById('leftSidebarPanel').classList.remove('hidden');
+        }
+
+        /* ================= ACTIVE CHAT & MULTI-AREA ISOLATION ================= */
+        function renderActiveChat() {
+            const chat = APP_STATE.chats.find(c => c.id === APP_STATE.activeChatId) || APP_STATE.chats[0];
+            if (!chat) return;
+
+            document.getElementById('activeChatAvatar').src = chat.avatar;
+            document.getElementById('activeChatTitle').textContent = chat.title;
+            document.getElementById('activeChatSubtitle').textContent = chat.subtitle;
+
+            const badge = document.getElementById('activeChatBadge');
+            const isAdminGrp = chat.type === 'admin_group';
+            const isFamilyGrp = chat.type === 'family_group';
+            const isOfficial = chat.type === 'official';
+
+            badge.textContent = isAdminGrp ? 'ADMIN GROUP' : (isFamilyGrp ? 'FAMILY GROUP' : (isOfficial ? 'VERIFIED OFFICIAL' : 'E2EE CHAT'));
+
+            document.getElementById('adminAreaTabsBar').classList.toggle('hidden', !isAdminGrp);
+            document.getElementById('btnGroupSettings').classList.toggle('hidden', !isAdminGrp);
+            document.getElementById('btnExportOrders').classList.toggle('hidden', !isAdminGrp);
+
+            const btnVoice = document.getElementById('btnGroupVoiceChat');
+            const btnVideo = document.getElementById('btnGroupVideoCall');
+            btnVoice.classList.toggle('hidden', !isFamilyGrp);
+            btnVoice.classList.toggle('flex', isFamilyGrp);
+            btnVideo.classList.toggle('hidden', !isFamilyGrp);
+            btnVideo.classList.toggle('flex', isFamilyGrp);
+
+            document.getElementById('officialChannelFooter').classList.toggle('hidden', !isOfficial);
+            document.getElementById('chatComposerBar').classList.toggle('hidden', isOfficial);
+
+            if (isAdminGrp) {
+                renderAdminAreaTabs();
+            }
+
+            const container = document.getElementById('messagesContainer');
+            const visibleMessages = chat.messages.filter(m => {
+                if (!isAdminGrp) return true;
+                return (m.area || 'All Areas') === APP_STATE.activeAreaTab;
+            });
+
+            if (visibleMessages.length === 0) {
+                container.innerHTML = `
+                    <div class="h-full flex flex-col items-center justify-center text-center p-6 text-slate-400 space-y-2">
+                        <i class="fa-solid fa-shield-halved text-3xl text-emerald-500/60"></i>
+                        <div class="text-sm font-bold text-slate-200">Isolated Channel: ${APP_STATE.activeAreaTab}</div>
+                        <p class="text-xs max-w-sm">Messages sent in <b>${APP_STATE.activeAreaTab}</b> are completely private to this area and never leak into other areas.</p>
+                    </div>
+                `;
+                return;
+            }
+
+            container.innerHTML = visibleMessages.map(m => renderMessageBubble(m)).join('');
+            container.scrollTop = container.scrollHeight;
+        }
+
+        function renderAdminAreaTabs() {
+            const list = document.getElementById('areaTabsList');
+            list.innerHTML = APP_STATE.customAreas.map(area => {
+                const active = area === APP_STATE.activeAreaTab;
+                return `
+                    <button onclick="switchAdminAreaTab('${area}')" class="px-3 py-1 rounded-lg text-xs font-bold transition shrink-0 ${active ? 'bg-blue-600 text-white shadow' : 'bg-slate-800 hover:bg-slate-700 text-slate-300'}">
+                        ${area === 'All Areas' ? '📢 All Areas (Common)' : '📍 ' + area}
+                    </button>
+                `;
+            }).join('');
+        }
+
+        function switchAdminAreaTab(area) {
+            APP_STATE.activeAreaTab = area;
+            renderActiveChat();
+        }
+
+        function addCustomAreaTab() {
+            openGenericModal('Add New Isolated Area Tab', `
+                <p class="text-xs text-slate-300">Create a dedicated private area channel inside <b>SKMD Distribution HQ</b>:</p>
+                <input id="newAreaNameInput" type="text" placeholder="e.g., Ongole or Nellore" class="w-full px-3.5 py-2.5 rounded-xl bg-slate-800 border border-slate-600 text-white text-xs">
+                <button onclick="confirmAddCustomArea()" class="w-full py-2.5 rounded-xl bg-emerald-600 text-white font-bold text-xs">Create Isolated Area</button>
+            `);
+        }
+
+        function confirmAddCustomArea() {
+            const val = document.getElementById('newAreaNameInput').value.trim();
+            if (!val) return;
+            if (!APP_STATE.customAreas.includes(val)) {
+                APP_STATE.customAreas.push(val);
+            }
+            APP_STATE.activeAreaTab = val;
+            saveAppState();
+            closeGenericModal();
+            renderActiveChat();
+            showToast('Area channel "' + val + '" created!');
+        }
+
+        function renderMessageBubble(m) {
+            const align = m.mine ? 'items-end' : 'items-start';
+            const bubbleBg = m.mine
+                ? 'bg-blue-600 text-white rounded-2xl rounded-tr-sm'
+                : 'bg-slate-800 text-slate-100 border border-slate-700 rounded-2xl rounded-tl-sm';
+
+            const canDeleteForBoth = m.mine && m.ts && (Date.now() - m.ts < 60000);
+
+            let bodyHtml = `<p class="text-xs sm:text-sm leading-relaxed whitespace-pre-wrap">${m.text}</p>`;
+
+            if (m.type === 'view_once') {
+                bodyHtml = m.opened
+                    ? `<div class="flex items-center gap-2 text-xs italic opacity-80"><i class="fa-solid fa-circle-dot"></i> ① Opened · View Once Photo expired</div>`
+                    : `<button onclick="openViewOncePhoto('${m.id}')" class="px-3.5 py-2 rounded-xl bg-amber-500/20 border border-amber-400/50 text-amber-200 text-xs font-extrabold flex items-center gap-2">
+                        <i class="fa-solid fa-eye"></i> ① View Once Photo (Tap to Open)
+                       </button>`;
+            } else if (m.type === 'image') {
+                bodyHtml = `
+                    <div class="space-y-1.5">
+                        <img onclick="openLightbox('${m.mediaUrl}', '${m.text}')" src="${m.mediaUrl}" alt="Photo" class="max-h-52 rounded-xl cursor-pointer object-cover border border-white/10">
+                        <p class="text-xs">${m.text}</p>
+                    </div>
+                `;
+            } else if (m.type === 'document') {
+                bodyHtml = `
+                    <div class="p-2.5 rounded-xl bg-black/25 border border-white/15 flex items-center gap-3">
+                        <i class="fa-solid fa-file-invoice text-xl text-sky-300"></i>
+                        <div class="min-w-0">
+                            <div class="text-xs font-bold truncate">${m.fileName || m.text}</div>
+                            <div class="text-[10px] opacity-80">Original Document Format · E2EE</div>
+                        </div>
+                    </div>
+                `;
+            } else if (m.type === 'location_live' || m.type === 'location_current') {
+                const isLive = m.type === 'location_live';
+                bodyHtml = `
+                    <div class="p-3 rounded-xl bg-slate-950/60 border ${isLive ? 'border-emerald-400/50' : 'border-sky-400/40'} space-y-2 w-60">
+                        <div class="h-24 rounded-lg bg-gradient-to-br from-slate-800 via-blue-950 to-slate-900 border border-white/10 flex flex-col items-center justify-center relative overflow-hidden">
+                            <span class="w-8 h-8 rounded-full ${isLive ? 'bg-emerald-500/30 animate-ping' : 'bg-sky-500/20'} absolute"></span>
+                            <i class="fa-solid ${isLive ? 'fa-satellite-dish text-emerald-400' : 'fa-location-dot text-rose-400'} text-2xl relative z-10"></i>
+                            <span class="text-[10px] font-extrabold mt-1 ${isLive ? 'text-emerald-300' : 'text-sky-300'} uppercase tracking-wider">
+                                ${isLive ? '● LIVE TRACKING (' + (m.duration || '1 Hour') + ')' : '📍 CURRENT PIN LOCATION'}
+                            </span>
+                        </div>
+                        <div class="text-xs font-bold text-white">${m.text}</div>
+                        <div class="text-[10px] text-slate-300">${isLive ? 'Updating real-time vehicle GPS coordinates...' : 'Accurate to 8 meters · Shared once'}</div>
+                    </div>
+                `;
+            } else if (m.type === 'sticker') {
+                bodyHtml = `<div class="px-4 py-3 rounded-2xl bg-gradient-to-br from-amber-500 to-orange-600 text-slate-950 font-black text-sm tracking-wide shadow-lg">${m.text}</div>`;
+            } else if (m.type === 'upi_qr') {
+                bodyHtml = `
+                    <div class="p-3 rounded-xl bg-white text-slate-900 space-y-2 w-56">
+                        <div class="flex items-center justify-between text-[11px] font-extrabold text-emerald-700">
+                            <span>UPI PAYMENT REQUEST</span>
+                            <span>${m.paid ? '✅ PAID' : '⏳ PENDING'}</span>
+                        </div>
+                        <div class="text-base font-black">₹${m.amount}</div>
+                        <div class="p-2 bg-slate-100 rounded-lg text-center">
+                            <i class="fa-solid fa-qrcode text-5xl text-slate-900"></i>
+                            <div class="text-[10px] font-mono mt-1">skmd.merchant@upi</div>
+                        </div>
+                        ${!m.paid ? `<button onclick="markUpiPaid('${m.id}')" class="w-full py-1.5 rounded-lg bg-emerald-600 text-white text-xs font-bold">Mark as Paid</button>` : ''}
+                    </div>
+                `;
+            } else if (m.type === 'poll') {
+                bodyHtml = `
+                    <div class="space-y-2 w-60">
+                        <div class="text-xs font-extrabold">📊 ${m.text}</div>
+                        ${(m.options || []).map((opt, idx) => `
+                            <button onclick="voteInPoll('${m.id}', ${idx})" class="w-full px-3 py-1.5 rounded-lg bg-black/25 hover:bg-black/40 text-left text-xs flex justify-between">
+                                <span>${opt.label}</span>
+                                <span class="font-bold">${opt.votes}</span>
+                            </button>
+                        `).join('')}
+                    </div>
+                `;
+            }
+
+            return `
+                <div class="flex flex-col ${align} msg-bubble-in">
+                    <div class="max-w-[85%] sm:max-w-[70%] px-3.5 py-2.5 shadow ${bubbleBg}">
+                        ${!m.mine ? `<div class="text-[11px] font-extrabold text-emerald-400 mb-1">${m.sender}</div>` : ''}
+                        ${bodyHtml}
+                        ${m.translatedText ? `<div class="mt-1.5 pt-1.5 border-t border-white/20 text-xs text-amber-200 font-medium">🌐 ${m.translatedText}</div>` : ''}
+                        <div class="mt-1.5 flex items-center justify-end gap-2 text-[10px] opacity-80">
+                            <button onclick="translateMessage('${m.id}')" title="Translate" class="hover:underline">🌐 Translate</button>
+                            <button onclick="toggleStarMessage('${m.id}')" title="Star Message">${m.starred ? '⭐' : '☆'}</button>
+                            ${canDeleteForBoth ? `<button onclick="deleteMessageForBoth('${m.id}')" class="text-rose-200 font-bold hover:underline">🗑️ Delete for Both</button>` : ''}
+                            <span>${m.time}</span>
+                        </div>
+                    </div>
+                </div>
+            `;
+        }
+
+        /* ================= MESSAGING, ATTACHMENTS, STICKERS & TRANSLATION ================= */
+        function sendMessage(customPayload = null) {
+            const chat = APP_STATE.chats.find(c => c.id === APP_STATE.activeChatId);
+            if (!chat || chat.type === 'official') return;
+
+            const input = document.getElementById('messageInput');
+            const text = customPayload ? customPayload.text : input.value.trim();
+            if (!text) return;
+
+            const now = new Date();
+            const timeStr = now.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
+
+            chat.messages.push({
+                id: 'msg_' + Date.now(),
+                sender: APP_STATE.profile.name,
+                mine: true,
+                area: chat.type === 'admin_group' ? APP_STATE.activeAreaTab : 'All Areas',
+                type: customPayload?.type || 'text',
+                text,
+                mediaUrl: customPayload?.mediaUrl || '',
+                fileName: customPayload?.fileName || '',
+                duration: customPayload?.duration || '',
+                amount: customPayload?.amount || '',
+                options: customPayload?.options || null,
+                opened: false,
+                paid: false,
+                starred: false,
+                ts: Date.now(),
+                time: timeStr
+            });
+
+            if (!customPayload) input.value = '';
+            saveAppState();
+            renderSidebarList();
+            renderActiveChat();
+        }
+
+        function deleteMessageForBoth(msgId) {
+            const chat = APP_STATE.chats.find(c => c.id === APP_STATE.activeChatId);
+            if (!chat) return;
+            chat.messages = chat.messages.filter(m => m.id !== msgId);
+            saveAppState();
+            renderActiveChat();
+            showToast('Message deleted for both sides within 1-minute window');
+        }
+
+        function toggleStarMessage(msgId) {
+            const chat = APP_STATE.chats.find(c => c.id === APP_STATE.activeChatId);
+            if (!chat) return;
+            const m = chat.messages.find(x => x.id === msgId);
+            if (m) {
+                m.starred = !m.starred;
+                saveAppState();
+                renderActiveChat();
+                showToast(m.starred ? 'Message Starred' : 'Removed from Starred');
+            }
+        }
+
+        function translateMessage(msgId) {
+            const chat = APP_STATE.chats.find(c => c.id === APP_STATE.activeChatId);
+            if (!chat) return;
+            const m = chat.messages.find(x => x.id === msgId);
+            if (!m) return;
+            const langObj = APP_LANGUAGES.find(l => l.code === APP_STATE.selectedLanguage) || APP_LANGUAGES[1];
+            const targetLang = langObj.code === 'en' ? 'Telugu (తెలుగు)' : `${langObj.name} (${langObj.native})`;
+            m.translatedText = `[${targetLang}]: ${m.text}`;
+            renderActiveChat();
+        }
+
+        function toggleAttachmentMenu(e) {
+            if (e) e.stopPropagation();
+            document.getElementById('attachmentMenu').classList.toggle('hidden');
+            document.getElementById('emojiStickerPopover').classList.add('hidden');
+        }
+
+        function triggerGalleryUpload(isViewOnce) {
+            pendingViewOnceFlag = isViewOnce;
+            document.getElementById('attachmentMenu').classList.add('hidden');
+            document.getElementById('hiddenMediaInput').click();
+        }
+
+        function handleMediaFileSelected(e) {
+            const file = e.target.files[0];
+            if (!file) return;
+            const url = URL.createObjectURL(file);
+            sendMessage({
+                type: pendingViewOnceFlag ? 'view_once' : 'image',
+                text: pendingViewOnceFlag ? '① View Once Photo' : file.name,
+                mediaUrl: url
+            });
+            e.target.value = '';
+            showToast(pendingViewOnceFlag ? 'View Once Photo sent!' : 'Photo sent!');
+        }
+
+        function openViewOncePhoto(msgId) {
+            const chat = APP_STATE.chats.find(c => c.id === APP_STATE.activeChatId);
+            if (!chat) return;
+            const m = chat.messages.find(x => x.id === msgId);
+            if (!m || m.opened) return;
+            openLightbox(m.mediaUrl || 'https://placehold.co/600x400/0f172a/10b981?text=View+Once+Protected+Photo', '① View Once Photo — Will disappear on close');
+            m.opened = true;
+            saveAppState();
+            renderActiveChat();
+        }
+
+        function triggerDocumentUpload() {
+            document.getElementById('attachmentMenu').classList.add('hidden');
+            document.getElementById('hiddenDocInput').click();
+        }
+
+        function handleDocFileSelected(e) {
+            const file = e.target.files[0];
+            if (!file) return;
+            sendMessage({
+                type: 'document',
+                text: file.name,
+                fileName: `${file.name} (${Math.max(1, Math.round(file.size / 1024))} KB)`
+            });
+            e.target.value = '';
+            showToast('Document sent in original uncompressed format');
+        }
+
+        function openLocationPickerModal() {
+            document.getElementById('attachmentMenu').classList.add('hidden');
+            openGenericModal('Share Location', `
+                <div class="space-y-3">
+                    <div class="p-3.5 rounded-2xl bg-emerald-950/50 border border-emerald-500/40 space-y-2.5">
+                        <div class="flex items-center gap-2.5">
+                            <div class="w-9 h-9 rounded-xl bg-emerald-600/30 text-emerald-300 flex items-center justify-center shrink-0">
+                                <i class="fa-solid fa-satellite-dish"></i>
+                            </div>
+                            <div>
+                                <div class="text-xs font-extrabold text-white">Share Live Location</div>
+                                <div class="text-[11px] text-slate-300">Continuous real-time GPS tracking for delivery vehicles</div>
+                            </div>
+                        </div>
+                        <div class="grid grid-cols-3 gap-1.5">
+                            <button onclick="sendSelectedLocation('live', '15 Mins')" class="py-2 rounded-xl bg-emerald-600 hover:bg-emerald-500 text-white text-xs font-bold">15 Mins</button>
+                            <button onclick="sendSelectedLocation('live', '1 Hour')" class="py-2 rounded-xl bg-emerald-600 hover:bg-emerald-500 text-white text-xs font-bold">1 Hour</button>
+                            <button onclick="sendSelectedLocation('live', '8 Hours')" class="py-2 rounded-xl bg-emerald-600 hover:bg-emerald-500 text-white text-xs font-bold">8 Hours</button>
+                        </div>
+                    </div>
+
+                    <button onclick="sendSelectedLocation('current', '')" class="w-full p-3.5 rounded-2xl bg-slate-800 hover:bg-slate-700 border border-slate-600 flex items-center gap-3 text-left transition">
+                        <div class="w-9 h-9 rounded-xl bg-sky-600/30 text-sky-300 flex items-center justify-center shrink-0">
+                            <i class="fa-solid fa-location-dot"></i>
+                        </div>
+                        <div>
+                            <div class="text-xs font-extrabold text-white">Send Your Current Location</div>
+                            <div class="text-[11px] text-slate-300">Share exact static shop / warehouse GPS pin (Accurate to 8m)</div>
+                        </div>
+                    </button>
+                </div>
+            `);
+        }
+
+        function sendSelectedLocation(mode, duration) {
+            closeGenericModal();
+            if (mode === 'live') {
+                sendMessage({
+                    type: 'location_live',
+                    text: 'NH-16 Auto Nagar Route · Live Vehicle GPS',
+                    duration: duration || '1 Hour'
+                });
+                showToast('Live Location shared (' + (duration || '1 Hour') + ')');
+            } else {
+                sendMessage({
+                    type: 'location_current',
+                    text: 'SKMD Main Warehouse & Dispatch Hub (Current Pin)'
+                });
+                showToast('Current Location pin sent!');
+            }
+        }
+
+        function sendQuickVoiceNote() {
+            sendMessage({
+                type: 'text',
+                text: '🎙️ Encrypted Voice Note (0:14) · Tap to Play'
+            });
+        }
+
+        /* ================= EMOJIS & STICKERS ================= */
+        function populateEmojisAndStickers() {
+            const emojis = ['😊', '🙏', '👍', '❤️', '🚚', '📦', '✅', '💰', '🧾', '🔥', '🎉', '⭐'];
+            const stickers = ['ORDER CONFIRMED ✅', 'DISPATCHED 🚚', 'FRESH STOCK 📦', 'PAYMENT PAID 💰', 'URGENT INDENT ⚡', 'THANK YOU 🙏'];
+
+            document.getElementById('emojiGridPanel').innerHTML = emojis.map(em =>
+                `<button onclick="appendEmoji('${em}')" class="p-1.5 rounded-lg hover:bg-slate-800">${em}</button>`
+            ).join('');
+
+            document.getElementById('stickerGridPanel').innerHTML = stickers.map(st =>
+                `<button onclick="sendSticker('${st}')" class="p-2 rounded-xl bg-gradient-to-r from-amber-500 to-orange-500 text-slate-950 font-black text-[11px] shadow hover:scale-105 transition">${st}</button>`
+            ).join('');
+        }
+
+        function toggleEmojiStickerPopover(e) {
+            if (e) e.stopPropagation();
+            document.getElementById('emojiStickerPopover').classList.toggle('hidden');
+            document.getElementById('attachmentMenu').classList.add('hidden');
+        }
+
+        function openStickerTabFromAttachment() {
+            document.getElementById('attachmentMenu').classList.add('hidden');
+            document.getElementById('emojiStickerPopover').classList.remove('hidden');
+            switchEmojiStickerTab('stickers');
+        }
+
+        function switchEmojiStickerTab(tab) {
+            const isSticker = tab === 'stickers';
+            document.getElementById('emojiGridPanel').classList.toggle('hidden', isSticker);
+            document.getElementById('stickerGridPanel').classList.toggle('hidden', !isSticker);
+            document.getElementById('tabBtnEmojis').className = !isSticker ? 'py-1.5 rounded-lg bg-emerald-600 text-white' : 'py-1.5 rounded-lg text-slate-300';
+            document.getElementById('tabBtnStickers').className = isSticker ? 'py-1.5 rounded-lg bg-emerald-600 text-white' : 'py-1.5 rounded-lg text-slate-300';
+        }
+
+        function appendEmoji(em) {
+            const input = document.getElementById('messageInput');
+            input.value += em;
+            input.focus();
+        }
+
+        function sendSticker(label) {
+            document.getElementById('emojiStickerPopover').classList.add('hidden');
+            sendMessage({ type: 'sticker', text: label });
+        }
+
+        /* ================= UPI QR, POLLS, SCHEDULED MESSAGES & CSV EXPORT ================= */
+        function openUpiRequestModal() {
+            document.getElementById('attachmentMenu').classList.add('hidden');
+            openGenericModal('Request UPI Payment / QR', `
+                <label class="block text-xs font-bold text-slate-300">Invoice Amount (₹)</label>
+                <input id="upiAmountInput" type="number" value="24500" class="w-full px-3.5 py-2.5 rounded-xl bg-slate-800 border border-slate-600 text-white font-bold">
+                <button onclick="sendUpiRequestCard()" class="w-full py-2.5 rounded-xl bg-emerald-600 text-white font-bold text-xs">Send UPI QR Payment Card</button>
+            `);
+        }
+
+        function sendUpiRequestCard() {
+            const amt = document.getElementById('upiAmountInput').value || '5000';
+            closeGenericModal();
+            sendMessage({ type: 'upi_qr', text: 'UPI Payment Request ₹' + amt, amount: amt });
+        }
+
+        function markUpiPaid(msgId) {
+            const chat = APP_STATE.chats.find(c => c.id === APP_STATE.activeChatId);
+            if (!chat) return;
+            const m = chat.messages.find(x => x.id === msgId);
+            if (m) {
+                m.paid = true;
+                saveAppState();
+                renderActiveChat();
+                showToast('Payment marked as Paid!');
+            }
+        }
+
+        function openPollModal() {
+            document.getElementById('attachmentMenu').classList.add('hidden');
+            openGenericModal('Create Stock / Dispatch Poll', `
+                <input id="pollQuestionInput" type="text" value="Morning Vehicle Dispatch Slot?" class="w-full px-3.5 py-2.5 rounded-xl bg-slate-800 border border-slate-600 text-white text-xs font-bold">
+                <button onclick="sendPollCard()" class="w-full py-2.5 rounded-xl bg-emerald-600 text-white font-bold text-xs">Publish Poll</button>
+            `);
+        }
+
+        function sendPollCard() {
+            const q = document.getElementById('pollQuestionInput').value.trim() || 'Confirm Stock Order?';
+            closeGenericModal();
+            sendMessage({
+                type: 'poll',
+                text: q,
+                options: [
+                    { label: '7:00 AM Morning Slot', votes: 1 },
+                    { label: '2:00 PM Afternoon Slot', votes: 0 }
+                ]
+            });
+        }
+
+        function voteInPoll(msgId, optIdx) {
+            const chat = APP_STATE.chats.find(c => c.id === APP_STATE.activeChatId);
+            if (!chat) return;
+            const m = chat.messages.find(x => x.id === msgId);
+            if (m && m.options[optIdx]) {
+                m.options[optIdx].votes += 1;
+                saveAppState();
+                renderActiveChat();
+            }
+        }
+
+        function openScheduleMessageModal() {
+            openGenericModal('Schedule Future Message', `
+                <p class="text-xs text-slate-300">Schedule an automatic dispatch alert or offer:</p>
+                <input id="schedMsgText" type="text" value="Reminder: Submit tomorrow's morning stock indent before 8 PM." class="w-full px-3.5 py-2.5 rounded-xl bg-slate-800 border border-slate-600 text-white text-xs">
+                <button onclick="triggerDemoScheduledSend()" class="w-full py-2.5 rounded-xl bg-sky-600 text-white font-bold text-xs">Schedule (Deliver in 5 Seconds Demo)</button>
+            `);
+        }
+
+        function triggerDemoScheduledSend() {
+            const text = document.getElementById('schedMsgText').value.trim();
+            if (!text) return;
+            closeGenericModal();
+            showToast('Message scheduled! Will auto-deliver in 5 seconds...');
+            setTimeout(() => {
+                sendMessage({ type: 'text', text: '🕒 [Scheduled]: ' + text });
+                showToast('Scheduled message delivered!');
+            }, 5000);
+        }
+
+        function exportOrdersToCSV() {
+            const chat = APP_STATE.chats.find(c => c.id === APP_STATE.activeChatId);
+            if (!chat) return;
+            const rows = [['Area', 'Sender', 'Message', 'Time']];
+            chat.messages.forEach(m => rows.push([m.area || 'All Areas', m.sender, `"${m.text.replace(/"/g, '""')}"`, m.time]));
+            const csv = rows.map(r => r.join(',')).join('\n');
+            const blob = new Blob([csv], { type: 'text/csv' });
+            const url = URL.createObjectURL(blob);
+            const a = document.createElement('a');
+            a.href = url;
+            a.download = `SKMD_${APP_STATE.activeAreaTab.replace(/\s+/g, '_')}_Orders.csv`;
+            a.click();
+            showToast('Orders exported to CSV!');
+        }
+
+        /* ================= GROUP MANAGEMENT, VOICE ROOM & WEBRTC CALLS ================= */
+        function openGroupSettingsModal() {
+            const chat = APP_STATE.chats.find(c => c.id === APP_STATE.activeChatId);
+            if (!chat) return;
+            openGenericModal('Manage Group Members & Areas', `
+                <div class="text-xs text-slate-300">Active Area: <b class="text-emerald-400">${APP_STATE.activeAreaTab}</b></div>
+                <div class="space-y-1.5">
+                    ${(chat.members || []).map(mem => `
+                        <div class="p-2.5 rounded-xl bg-slate-800 flex items-center justify-between text-xs">
+                            <span class="font-bold text-white">${mem}</span>
+                            <span class="text-emerald-400 font-semibold">Verified</span>
+                        </div>
+                    `).join('')}
+                </div>
+                <div class="flex gap-2 pt-2">
+                    <input id="addMemberInput" type="text" placeholder="Add new distributor..." class="flex-1 px-3 py-2 rounded-xl bg-slate-800 border border-slate-600 text-xs text-white">
+                    <button onclick="addGroupMember()" class="px-4 py-2 rounded-xl bg-emerald-600 text-white text-xs font-bold">Add</button>
+                </div>
+            `);
+        }
+
+        function addGroupMember() {
+            const name = document.getElementById('addMemberInput').value.trim();
+            const chat = APP_STATE.chats.find(c => c.id === APP_STATE.activeChatId);
+            if (!name || !chat) return;
+            chat.members = chat.members || [];
+            chat.members.push(name);
+            saveAppState();
+            openGroupSettingsModal();
+            showToast(name + ' added to group!');
+        }
+
+        function startFamilyGroupVoiceChat() {
+            document.getElementById('familyVoiceRoomBar').classList.remove('hidden');
+            showToast('Joined Live Family Voice Room');
+        }
+
+        function leaveFamilyGroupVoiceChat() {
+            document.getElementById('familyVoiceRoomBar').classList.add('hidden');
+            showToast('Left Family Voice Room');
+        }
+
+        function toggleVoiceRoomMute() {
+            const btn = document.getElementById('voiceRoomMuteBtn');
+            const muted = btn.textContent.includes('Unmute');
+            btn.innerHTML = muted ? '<i class="fa-solid fa-microphone"></i> Mute' : '<i class="fa-solid fa-microphone-slash text-rose-400"></i> Unmute';
+        }
+
+        function startWebRTCCall(mode, isGroup) {
+            const chat = APP_STATE.chats.find(c => c.id === APP_STATE.activeChatId);
+            document.getElementById('callParticipantName').textContent = chat ? chat.title : 'Encrypted Call';
+            const grid = document.getElementById('callVideoGrid');
+            const participants = isGroup ? ['You (Host)', 'Amma ❤️', 'Nanna', 'Ravi'] : ['You', chat ? chat.title : 'Contact'];
+            grid.innerHTML = participants.map(p => `
+                <div class="h-40 sm:h-52 rounded-2xl bg-slate-900 border border-slate-700 flex flex-col items-center justify-center gap-2">
+                    <div class="w-14 h-14 rounded-full bg-emerald-600/30 border border-emerald-400 flex items-center justify-center text-white font-extrabold text-lg">
+                        ${p.charAt(0)}
+                    </div>
+                    <span class="text-xs font-bold text-white">${p}</span>
+                </div>
+            `).join('');
+
+            callSeconds = 0;
+            clearInterval(callTimerInterval);
+            callTimerInterval = setInterval(() => {
+                callSeconds++;
+                const mins = String(Math.floor(callSeconds / 60)).padStart(2, '0');
+                const secs = String(callSeconds % 60).padStart(2, '0');
+                document.getElementById('callStatusTimer').textContent = `${mins}:${secs} · E2EE ${mode.toUpperCase()}`;
+            }, 1000);
+
+            document.getElementById('webrtcCallOverlay').classList.remove('hidden');
+        }
+
+        function endWebRTCCall() {
+            clearInterval(callTimerInterval);
+            document.getElementById('webrtcCallOverlay').classList.add('hidden');
+            showToast('Call ended');
+        }
+
+        /* ================= TOP 3-DOTS MENU MODALS ================= */
+        function openNewGroupModal() {
+            document.getElementById('mainTopDotsMenu').classList.add('hidden');
+            openGenericModal('Create New Group', `
+                <input id="newGroupTitle" type="text" placeholder="Group Name (e.g., Telangana Distributors)" class="w-full px-3.5 py-2.5 rounded-xl bg-slate-800 border border-slate-600 text-white text-xs">
+                <select id="newGroupType" class="w-full px-3.5 py-2.5 rounded-xl bg-slate-800 border border-slate-600 text-white text-xs">
+                    <option value="admin_group">Admin Group (Multi-Area Isolation)</option>
+                    <option value="family_group">Family Group (Voice Room & Group Video)</option>
+                </select>
+                <button onclick="confirmCreateGroup()" class="w-full py-2.5 rounded-xl bg-emerald-600 text-white font-bold text-xs">Create Group</button>
+            `);
+        }
+
+        function confirmCreateGroup() {
+            const title = document.getElementById('newGroupTitle').value.trim();
+            const type = document.getElementById('newGroupType').value;
+            if (!title) return;
+            const id = 'grp_' + Date.now();
+            APP_STATE.chats.unshift({
+                id,
+                title,
+                type,
+                hiddenInVault: false,
+                avatar: `https://ui-avatars.com/api/?name=${encodeURIComponent(title)}&background=059669&color=fff&bold=true`,
+                subtitle: type === 'admin_group' ? 'Multi-Area Isolated Admin Group' : 'Family Group · Voice & Video Ready',
+                members: ['You'],
+                unread: 0,
+                messages: [{ id: 'm_' + Date.now(), sender: APP_STATE.profile.name, mine: true, area: 'All Areas', type: 'text', text: 'Group "' + title + '" created!', time: 'Just now', ts: Date.now() }]
+            });
+            APP_STATE.activeChatId = id;
+            saveAppState();
+            closeGenericModal();
+            renderSidebarList();
+            renderActiveChat();
+        }
+
+        function openNewContactModal() {
+            document.getElementById('mainTopDotsMenu').classList.add('hidden');
+            openGenericModal('Add New Contact', `
+                <input id="newContactName" type="text" placeholder="Contact / Store Name" class="w-full px-3.5 py-2.5 rounded-xl bg-slate-800 border border-slate-600 text-white text-xs">
+                <input id="newContactPhone" type="tel" placeholder="+91 98765 43210" class="w-full px-3.5 py-2.5 rounded-xl bg-slate-800 border border-slate-600 text-white text-xs font-mono">
+                <button onclick="confirmCreateContact()" class="w-full py-2.5 rounded-xl bg-emerald-600 text-white font-bold text-xs">Save & Start Chat</button>
+            `);
+        }
+
+        function confirmCreateContact() {
+            const title = document.getElementById('newContactName').value.trim();
+            const phone = document.getElementById('newContactPhone').value.trim() || '+91 90000 11111';
+            if (!title) return;
+            const id = 'dir_' + Date.now();
+            APP_STATE.chats.unshift({
+                id,
+                title,
+                type: 'direct',
+                hiddenInVault: false,
+                avatar: `https://ui-avatars.com/api/?name=${encodeURIComponent(title)}&background=0284c7&color=fff&bold=true`,
+                subtitle: phone + ' · E2EE Verified',
+                unread: 0,
+                messages: []
+            });
+            APP_STATE.activeChatId = id;
+            saveAppState();
+            closeGenericModal();
+            renderSidebarList();
+            renderActiveChat();
+        }
+
+        function openNewBroadcastModal() {
+            document.getElementById('mainTopDotsMenu').classList.add('hidden');
+            openGenericModal('New Contact Broadcast List', `
+                <p class="text-xs text-slate-300">Send a private 1-to-1 broadcast to customers who have saved your number:</p>
+                <textarea id="contactBroadcastText" rows="3" placeholder="Type offer or stock update..." class="w-full p-3 rounded-xl bg-slate-800 border border-slate-600 text-white text-xs"></textarea>
+                <button onclick="closeGenericModal(); showToast('Broadcast queued for saved contacts!')" class="w-full py-2.5 rounded-xl bg-emerald-600 text-white font-bold text-xs">Send Broadcast</button>
+            `);
+        }
+
+        function openLinkedDevicesModal() {
+            document.getElementById('mainTopDotsMenu').classList.add('hidden');
+            openGenericModal('Linked Devices (NexusChat Web)', `
+                <div class="p-4 rounded-2xl bg-white text-slate-900 text-center space-y-2">
+                    <i class="fa-solid fa-qrcode text-7xl"></i>
+                    <div class="text-xs font-extrabold">Scan from web.nexuschat.app on Windows Chrome</div>
+                </div>
+                <div class="p-3 rounded-xl bg-slate-800 text-xs flex items-center justify-between">
+                    <span><i class="fa-brands fa-windows text-sky-400 mr-1.5"></i> Windows 11 · Chrome Desktop</span>
+                    <span class="text-emerald-400 font-bold">Active</span>
+                </div>
+            `);
+        }
+
+        function openStarredMessagesModal() {
+            document.getElementById('mainTopDotsMenu').classList.add('hidden');
+            const starred = [];
+            APP_STATE.chats.forEach(c => c.messages.forEach(m => { if (m.starred) starred.push({ chat: c.title, ...m }); }));
+            openGenericModal('Starred Messages', starred.length === 0
+                ? '<p class="text-xs text-slate-400">No starred messages yet.</p>'
+                : starred.map(s => `
+                    <div class="p-3 rounded-xl bg-slate-800 border border-slate-700 space-y-1">
+                        <div class="text-[11px] font-bold text-emerald-400">${s.chat} · ${s.sender}</div>
+                        <div class="text-xs text-white">${s.text}</div>
+                    </div>
+                `).join('')
+            );
+        }
+
+        function openShareAppModal() {
+            document.getElementById('mainTopDotsMenu').classList.add('hidden');
+            openGenericModal('Share & Download NexusChat', `
+                <div class="space-y-2 text-xs">
+                    <div class="p-3 rounded-xl bg-slate-800 flex items-center justify-between">
+                        <span><i class="fa-brands fa-android text-emerald-400 mr-2"></i>Android APK / Play Store</span>
+                        <button onclick="copyInviteLink('https://nexuschat.app/android')" class="px-3 py-1 rounded-lg bg-emerald-600 text-white font-bold">Copy Link</button>
+                    </div>
+                    <div class="p-3 rounded-xl bg-slate-800 flex items-center justify-between">
+                        <span><i class="fa-brands fa-apple text-slate-200 mr-2"></i>iOS App Store</span>
+                        <button onclick="copyInviteLink('https://nexuschat.app/ios')" class="px-3 py-1 rounded-lg bg-emerald-600 text-white font-bold">Copy Link</button>
+                    </div>
+                    <div class="p-3 rounded-xl bg-slate-800 flex items-center justify-between">
+                        <span><i class="fa-brands fa-windows text-sky-400 mr-2"></i>Windows PC Desktop (.exe)</span>
+                        <button onclick="copyInviteLink('https://nexuschat.app/windows')" class="px-3 py-1 rounded-lg bg-emerald-600 text-white font-bold">Copy Link</button>
+                    </div>
+                </div>
+            `);
+        }
+
+        function copyInviteLink(url) {
+            const temp = document.createElement('input');
+            temp.value = url;
+            document.body.appendChild(temp);
+            temp.select();
+            document.execCommand('copy');
+            document.body.removeChild(temp);
+            showToast('Copied: ' + url);
+        }
+
+        /* ================= SETTINGS MODAL POPULATE & SAVE ================= */
+        window.populateSettingsModal = function () {
+            document.getElementById('settingsProfileHeading').textContent = APP_STATE.profile.name;
+            document.getElementById('settingsProfileAvatar').src = `https://ui-avatars.com/api/?name=${encodeURIComponent(APP_STATE.profile.name)}&background=10b981&color=fff&bold=true`;
+            document.getElementById('setProfileName').value = APP_STATE.profile.name;
+            document.getElementById('setProfilePhone').value = APP_STATE.profile.phone;
+            document.getElementById('setProfileAbout').value = APP_STATE.profile.about;
+            document.getElementById('setProfileGmail').value = APP_STATE.profile.gmail;
+            document.getElementById('privLastSeen').value = APP_STATE.privacy.lastSeen;
+            document.getElementById('privPhoto').value = APP_STATE.privacy.photo;
+            document.getElementById('privAbout').value = APP_STATE.privacy.about;
+            document.getElementById('privStatus').value = APP_STATE.privacy.status;
+            document.getElementById('privAppLock').value = APP_STATE.privacy.appLock;
+
+            document.getElementById('languageOptionsGrid').innerHTML = APP_LANGUAGES.map(lang => `
+                <button onclick="selectAppLanguage('${lang.code}')" class="p-3 rounded-xl border text-left transition ${APP_STATE.selectedLanguage === lang.code ? 'bg-emerald-600/20 border-emerald-500 text-white' : 'bg-slate-800 border-slate-700 text-slate-300'}">
+                    <div class="font-bold text-xs">${lang.native}</div>
+                    <div class="text-[11px] opacity-80">${lang.name}</div>
+                </button>
+            `).join('');
+        };
+
+        function cycleProfileAvatar() {
+            showToast('Profile avatar refreshed');
+        }
+
+        function verifyGmailBackup() {
+            const gmail = document.getElementById('setProfileGmail').value.trim();
+            if (!gmail.includes('@')) return showToast('Enter a valid Gmail ID');
+            APP_STATE.profile.gmail = gmail;
+            saveAppState();
+            showToast('Encrypted chat backup synced to ' + gmail);
+        }
+
+        function saveProfileSettings() {
+            APP_STATE.profile.name = document.getElementById('setProfileName').value.trim() || 'SKMD Admin';
+            APP_STATE.profile.phone = document.getElementById('setProfilePhone').value.trim() || '+91 98480 12345';
+            APP_STATE.profile.about = document.getElementById('setProfileAbout').value.trim();
+            saveAppState();
+            syncProfileHeaderUI();
+            closeSettingsModal();
+            showToast('Profile saved!');
+        }
+
+        function selectSubscriptionPlan(plan) {
+            document.getElementById('currentPlanLabel').textContent = plan + ' (Active)';
+            showToast('Subscribed to ' + plan);
+        }
+
+        function savePrivacySettings() {
+            APP_STATE.privacy.lastSeen = document.getElementById('privLastSeen').value;
+            APP_STATE.privacy.photo = document.getElementById('privPhoto').value;
+            APP_STATE.privacy.about = document.getElementById('privAbout').value;
+            APP_STATE.privacy.status = document.getElementById('privStatus').value;
+            APP_STATE.privacy.appLock = document.getElementById('privAppLock').value;
+            saveAppState();
+            closeSettingsModal();
+            showToast('Privacy & App Lock preferences saved!');
+        }
+
+        function selectAppLanguage(code) {
+            APP_STATE.selectedLanguage = code;
+            saveAppState();
+            window.populateSettingsModal();
+            showToast('App language updated!');
+        }
+
+        /* ================= SUPER-ADMIN DEVELOPER CONSOLE LOGIC ================= */
+        function openDeveloperOptionsModal() {
+            document.getElementById('mainTopDotsMenu').classList.add('hidden');
+            if (!APP_STATE.isDeveloper) {
+                return showToast('Access Denied: Developer Role Required.');
+            }
+            const countrySel = document.getElementById('devTargetCountry');
+            countrySel.innerHTML = Object.keys(GLOBAL_USER_DIRECTORY).map(c =>
+                `<option value="${c}">${c} (${GLOBAL_USER_DIRECTORY[c].total} Users)</option>`
+            ).join('');
+            handleDevCountryChange();
+            renderSuspendedList();
+            renderDevBroadcastLogs();
+            document.getElementById('devBannerToggle').checked = APP_STATE.systemBanner.enabled;
+            document.getElementById('devBannerCustomText').value = APP_STATE.systemBanner.text;
+            document.getElementById('developerOptionsModal').classList.remove('hidden');
+        }
+
+        function closeDeveloperOptionsModal() {
+            document.getElementById('developerOptionsModal').classList.add('hidden');
+        }
+
+        function switchDevConsoleTab(tab) {
+            ['broadcast', 'controls', 'logs'].forEach(t => {
+                const cap = t.charAt(0).toUpperCase() + t.slice(1);
+                document.getElementById('devPanel' + cap).classList.toggle('hidden', t !== tab);
+                document.getElementById('devSubTab' + cap).className = (t === tab)
+                    ? 'px-3.5 py-2 rounded-xl bg-amber-500 text-slate-950 text-xs font-extrabold'
+                    : 'px-3.5 py-2 rounded-xl bg-slate-800 text-slate-200 text-xs font-bold';
+            });
+        }
+
+        function handleDevCountryChange() {
+            const country = document.getElementById('devTargetCountry').value;
+            const statesObj = GLOBAL_USER_DIRECTORY[country].states;
+            const stateSel = document.getElementById('devTargetState');
+            stateSel.innerHTML = Object.keys(statesObj).map(st =>
+                `<option value="${st}">${st} (${statesObj[st]} Users)</option>`
+            ).join('');
+
+            document.getElementById('devStateBreakdownGrid').innerHTML = Object.entries(statesObj).map(([st, cnt]) => `
+                <button onclick="selectDevStateCard('${st}')" class="p-2.5 rounded-xl bg-slate-800 hover:bg-slate-700 border border-slate-700 text-left">
+                    <div class="text-[11px] font-bold text-slate-200 truncate">${st}</div>
+                    <div class="text-xs font-extrabold text-amber-300">${cnt}</div>
+                </button>
+            `).join('');
+
+            updateDevTargetReachBadge();
+        }
+
+        function selectDevStateCard(st) {
+            document.getElementById('devTargetState').value = st;
+            updateDevTargetReachBadge();
+        }
+
+        function updateDevTargetReachBadge() {
+            const country = document.getElementById('devTargetCountry').value;
+            const state = document.getElementById('devTargetState').value;
+            const count = GLOBAL_USER_DIRECTORY[country]?.states[state] || '0';
+            document.getElementById('devSelectedReachCount').textContent = `${count} Users (${state})`;
+        }
+
+        function sendOfficialSystemBroadcast() {
+            if (!APP_STATE.isDeveloper) return;
+            const country = document.getElementById('devTargetCountry').value;
+            const state = document.getElementById('devTargetState').value;
+            const count = GLOBAL_USER_DIRECTORY[country]?.states[state] || '0';
+            const text = document.getElementById('devBroadcastMessageInput').value.trim();
+            if (!text) return showToast('Enter an official broadcast message');
+
+            const officialChat = APP_STATE.chats.find(c => c.id === 'chat_official');
+            if (officialChat) {
+                officialChat.messages.push({
+                    id: 'off_' + Date.now(),
+                    sender: 'NexusChat Official ✓',
+                    mine: false,
+                    area: 'All Areas',
+                    type: 'text',
+                    text: `[${country} · ${state}] ${text}`,
+                    time: 'Just now',
+                    starred: false
+                });
+                officialChat.unread += 1;
+            }
+
+            APP_STATE.devBroadcastLogs.unshift({
+                id: 'log_' + Date.now(),
+                region: `${country} · ${state}`,
+                reach: `${count} Users`,
+                text,
+                time: 'Just now',
+                readRate: '98%'
+            });
+
+            document.getElementById('devBroadcastMessageInput').value = '';
+            saveAppState();
+            renderSidebarList();
+            renderDevBroadcastLogs();
+            showToast(`Official Broadcast delivered to ${count} users in ${state}!`);
+        }
+
+        function toggleSystemBannerFromDev(enabled) {
+            APP_STATE.systemBanner.enabled = enabled;
+            APP_STATE.systemBanner.text = document.getElementById('devBannerCustomText').value.trim();
+            saveAppState();
+            syncSystemBannerUI();
+            showToast(enabled ? 'Global Maintenance/Update Banner Enabled' : 'Global Banner Hidden');
+        }
+
+        function suspendPhoneNumber() {
+            const num = document.getElementById('devBanPhoneInput').value.trim();
+            if (!num) return;
+            if (!APP_STATE.suspendedNumbers.includes(num)) {
+                APP_STATE.suspendedNumbers.push(num);
+            }
+            document.getElementById('devBanPhoneInput').value = '';
+            saveAppState();
+            renderSuspendedList();
+            showToast('Suspended ' + num);
+        }
+
+        function unbanPhoneNumber(num) {
+            APP_STATE.suspendedNumbers = APP_STATE.suspendedNumbers.filter(n => n !== num);
+            saveAppState();
+            renderSuspendedList();
+            showToast('Restored ' + num);
+        }
+
+        function renderSuspendedList() {
+            const el = document.getElementById('suspendedNumbersList');
+            el.innerHTML = APP_STATE.suspendedNumbers.map(num => `
+                <div class="p-2 rounded-xl bg-slate-900 flex items-center justify-between">
+                    <span class="font-mono text-rose-300 font-bold">${num}</span>
+                    <button onclick="unbanPhoneNumber('${num}')" class="px-2.5 py-1 rounded-lg bg-emerald-600 text-white font-bold">Unban</button>
+                </div>
+            `).join('');
+        }
+
+        function renderDevBroadcastLogs() {
+            const el = document.getElementById('devPanelLogs');
+            el.innerHTML = APP_STATE.devBroadcastLogs.map(log => `
+                <div class="p-3.5 rounded-2xl bg-slate-800 border border-slate-700 space-y-1">
+                    <div class="flex items-center justify-between text-xs font-extrabold">
+                        <span class="text-amber-300">${log.region} · ${log.reach}</span>
+                        <span class="text-emerald-400">Read: ${log.readRate}</span>
+                    </div>
+                    <p class="text-xs text-white">${log.text}</p>
+                    <div class="text-[10px] text-slate-400">${log.time}</div>
+                </div>
+            `).join('');
+        }
+
+        /* ================= GENERIC MODAL & LIGHTBOX HELPERS ================= */
+        function openGenericModal(title, htmlContent) {
+            document.getElementById('genericModalTitle').textContent = title;
+            document.getElementById('genericModalBody').innerHTML = htmlContent;
+            document.getElementById('genericActionModal').classList.remove('hidden');
+        }
+
+        function closeGenericModal() {
+            document.getElementById('genericActionModal').classList.add('hidden');
+        }
+
+        function openLightbox(url, caption) {
+            document.getElementById('lightboxImage').src = url;
+            document.getElementById('lightboxCaption').textContent = caption || 'Media Preview';
+            document.getElementById('imageLightboxModal').classList.remove('hidden');
+        }
+
+        function closeLightbox() {
+            document.getElementById('imageLightboxModal').classList.add('hidden');
+        }
+
+        /* ================= INITIALIZATION ON LOAD ================= */
+        window.addEventListener('DOMContentLoaded', () => {
+            populateEmojisAndStickers();
+
+            if (localStorage.getItem('nexuschat_large_text') === '1') {
+                const btn = document.getElementById('fontZoomToggleBtn');
+                if (btn) {
+                    btn.textContent = 'A-';
+                    btn.classList.add('bg-amber-500/20', 'border-amber-400');
+                }
+            }
+            if (localStorage.getItem('nexuschat_day_theme') === '1') {
+                const btn = document.getElementById('themeToggleBtn');
+                if (btn) btn.innerHTML = '<i class="fa-solid fa-moon text-indigo-600"></i>';
+            }
+
+            if (APP_STATE.isAuthenticated) {
+                document.getElementById('authOverlay').classList.add('hidden');
+                if (APP_STATE.privacy.appLock === 'every') {
+                    lockApp();
+                }
+            }
+            applyRoleVisibilityAndUI();
+        });
+    </script>
+</body>
 </html>
