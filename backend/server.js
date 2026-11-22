@@ -49,6 +49,8 @@ io.on('connection', (socket) => {
     activeSessions.set(socket.id, session);
     socket.join(`country:${session.country}`);
     socket.join(`state:${session.country}:${session.state}`);
+    const normalizedPhone = String(session.phone || '').replace(/\D/g, '').replace(/^91(?=\d{10}$)/, '');
+    if (normalizedPhone) socket.join(`phone:${normalizedPhone}`);
     socket.emit('auth:success', session);
   });
 
@@ -76,6 +78,10 @@ io.on('connection', (socket) => {
 
     await db.saveMessage(msg);
     io.to(`chat:${msg.chatId}:area:${msg.area}`).emit('chat:message', msg);
+    if (payload.recipientPhone) {
+      const recipientPhone = String(payload.recipientPhone).replace(/\D/g, '').replace(/^91(?=\d{10}$)/, '');
+      if (recipientPhone) io.to(`phone:${recipientPhone}`).emit('chat:message', msg);
+    }
     if (typeof ack === 'function') ack({ ok: true, message: msg });
   });
 

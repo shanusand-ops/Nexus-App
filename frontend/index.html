@@ -87,13 +87,13 @@
       <div id="loginOtpSection" class="space-y-3 text-left">
         <label class="block text-[11px] font-semibold uppercase tracking-wider text-slate-400">Mobile Number (10 Digits)</label>
         <div class="flex gap-2">
-          <input id="loginPhoneInput" type="tel" inputmode="numeric" maxlength="10" value="9876543210" oninput="validateLoginPhoneInput(this)" placeholder="Enter 10-digit Mobile Number" class="flex-1 bg-slate-950 border border-slate-700 rounded-xl px-3.5 py-2.5 text-sm text-white focus:outline-none focus:border-nexus-500 transition" />
+          <input id="loginPhoneInput" type="tel" inputmode="numeric" maxlength="10" value="" oninput="validateLoginPhoneInput(this)" placeholder="Enter 10-digit Mobile Number" class="flex-1 bg-slate-950 border border-slate-700 rounded-xl px-3.5 py-2.5 text-sm text-white focus:outline-none focus:border-nexus-500 transition" />
           <button onclick="sendSimulatedOtp()" class="px-3.5 py-2.5 rounded-xl bg-slate-800 hover:bg-slate-700 text-xs font-semibold text-cyan-300 border border-slate-700">Send OTP</button>
         </div>
         <p id="loginPhoneErrorHint" class="hidden text-[11px] text-rose-500 font-semibold"><i class="fa-solid fa-circle-exclamation mr-1"></i>Please enter a complete 10-digit mobile number.</p>
         <div id="otpVerifyBox" class="space-y-2">
           <label class="block text-[11px] font-semibold uppercase tracking-wider text-slate-400">OTP / Security Passcode</label>
-          <input id="loginOtpInput" type="password" value="492018" placeholder="Enter 6-digit OTP or Password" class="w-full bg-slate-950 border border-slate-700 rounded-xl px-3.5 py-2.5 text-sm text-white focus:outline-none focus:border-nexus-500" />
+          <input id="loginOtpInput" type="password" value="" placeholder="Enter 6-digit OTP or Password" class="w-full bg-slate-950 border border-slate-700 rounded-xl px-3.5 py-2.5 text-sm text-white focus:outline-none focus:border-nexus-500" />
         </div>
         <button onclick="handleLoginSubmit()" class="w-full btn-3d-embossed py-3 rounded-xl font-bold text-sm text-white flex items-center justify-center gap-2">
           <i class="fa-solid fa-right-to-bracket"></i> Verify & Enter NexusChat
@@ -918,11 +918,11 @@
     });
 
     const userProfile = {
-      name: 'Shanmukha (Admin)',
-      phone: '+91 98765 43210',
-      about: 'SKMD Pharma Distribution & Enterprise Admin',
-      email: 'shanmukha.skmd@gmail.com',
-      username: '@shanmukha_skmd',
+      name: 'NexusChat User',
+      phone: '',
+      about: 'NexusChat User',
+      email: '',
+      username: '',
       appLockEnabled: false,
       appLockMethod: 'FINGERPRINT',
       appLockSecret: '',
@@ -931,98 +931,25 @@
       readReceiptsEnabled: true
     };
 
-    const contacts = [
-      { id: 'c1', name: 'Suresh (Poet/Photographer)', phone: '+91 98481 11223', about: 'Expressing life through poetry & frames', avatar: 'S', color: 'bg-indigo-600', hidden: false, groupAddPrivacy: 'EVERYONE', savedMyNumber: true },
-      { id: 'c2', name: 'Guntur Medicals', phone: '+91 98482 44556', about: 'Pharma Wholesale Supplier', avatar: 'G', color: 'bg-emerald-600', hidden: false, groupAddPrivacy: 'EVERYONE', savedMyNumber: true },
-      { id: 'c3', name: 'Narasaraopet Pharma', phone: '+91 98483 77889', about: 'Retail & Distribution Node', avatar: 'N', color: 'bg-amber-600', hidden: false, groupAddPrivacy: 'INVITE_ONLY', savedMyNumber: false },
-      { id: 'c4', name: 'Ahmedabad Distributors', phone: '+91 98250 99001', about: 'Non-Local Express Supply', avatar: 'A', color: 'bg-purple-600', hidden: false, groupAddPrivacy: 'EVERYONE', savedMyNumber: true },
-      { id: 'c5', name: 'Shanmukha Private Vault', phone: '+91 98765 43210', about: 'Encrypted Personal Ledger', avatar: 'V', color: 'bg-rose-600', hidden: true, groupAddPrivacy: 'INVITE_ONLY', savedMyNumber: true }
-    ];
-
-    const groups = [
-      {
-        id: 'g1',
-        name: 'SKMD MedRep Alliance',
-        type: 'ADMIN_VIEW',
-        groupPassword: 'skmd',
-        previewMode: 'ADMIN',
-        previewMemberId: 'c2',
-        avatar: 'M',
-        color: 'bg-nexus-600',
-        areas: ['Vijayawada', 'Guntur', 'Narasaraopet'],
-        defaultArea: 'Vijayawada',
-        members: [
-          { id: 'admin_1', name: 'Shanmukha (Admin)', phone: '+91 98765 43210', role: 'ADMIN', area: 'Vijayawada' },
-          { id: 'c2', name: 'Guntur Medicals', phone: '+91 98482 44556', role: 'MEMBER', area: 'Guntur' },
-          { id: 'c3', name: 'Narasaraopet Pharma', phone: '+91 98483 77889', role: 'MEMBER', area: 'Narasaraopet' }
-        ]
-      },
-      {
-        id: 'g2',
-        name: 'SKMD Distributors Alliance',
-        type: 'ADMIN_VIEW',
-        groupPassword: 'skmd',
-        previewMode: 'ADMIN',
-        previewMemberId: 'c4',
-        avatar: 'D',
-        color: 'bg-emerald-600',
-        areas: ['Local (AP/TS)', 'Non-Local (Ahmedabad)'],
-        defaultArea: 'Local (AP/TS)',
-        members: [
-          { id: 'admin_1', name: 'Shanmukha (Admin)', phone: '+91 98765 43210', role: 'ADMIN', area: 'Local (AP/TS)' },
-          { id: 'c4', name: 'Ahmedabad Distributors', phone: '+91 98250 99001', role: 'MEMBER', area: 'Non-Local (Ahmedabad)' }
-        ]
-      },
-      {
-        id: 'g3',
-        name: 'Shanmukha Family',
-        type: 'FAMILY',
-        groupPassword: 'skmd',
-        previewMode: 'ADMIN',
-        previewMemberId: 'c1',
-        avatar: 'F',
-        color: 'bg-rose-600',
-        areas: ['Home', 'Events'],
-        defaultArea: 'Home',
-        members: [
-          { id: 'admin_1', name: 'Shanmukha (Admin)', phone: '+91 98765 43210', role: 'ADMIN', area: 'Home' },
-          { id: 'c1', name: 'Suresh (Poet/Photographer)', phone: '+91 98481 11223', role: 'MEMBER', area: 'Events' }
-        ]
-      }
-    ];
-
-    const statuses = [
-      { id: 's1', author: 'Shanmukha (My Status)', time: '10 mins ago', text: 'Morning dispatch vans active across Vijayawada, Guntur & Narasaraopet!', color: 'bg-nexus-600' },
-      { id: 's2', author: 'Suresh (Poet/Photographer)', time: '42 mins ago', text: 'Golden hour frames along Krishna Riverbank.', color: 'bg-indigo-600' }
-    ];
-
-    const callLogs = [
-      { id: 'cl1', name: 'Guntur Medicals', type: 'VOICE', time: 'Today, 10:15 AM', duration: '04:12' },
-      { id: 'cl2', name: 'Ahmedabad Distributors', type: 'VIDEO', time: 'Yesterday, 6:40 PM', duration: '11:05' }
-    ];
-
-    const chatMessages = {
-      c1: [
-        { id: 'm101', sender: 'Suresh (Poet/Photographer)', text: 'Namaste Shanmukha! Captured some great evening shots today.', timestamp: Date.now() - 3600000, status: 'READ' }
-      ],
-      c2: [
-        { id: 'm201', sender: 'Guntur Medicals', text: 'Order ready for morning dispatch: 30 units Azithromycin 500mg.', timestamp: Date.now() - 2400000, status: 'READ' }
-      ],
-      g1: [
-        { id: 'gm1', sender: 'Shanmukha (Admin)', text: 'Welcome to SKMD MedRep Alliance! All regional stock alerts will be posted here.', timestamp: Date.now() - 7200000, area: 'ALL', isAdminReplyOnly: false, status: 'READ' },
-        { id: 'gm2', sender: 'Shanmukha (Admin)', text: 'Vijayawada Dispatch: Morning van leaves at 8:30 AM sharp.', timestamp: Date.now() - 3600000, area: 'Vijayawada', isAdminReplyOnly: false, status: 'DELIVERED' },
-        { id: 'gm3', sender: 'Guntur Medicals', text: 'Confirmed! Guntur Medicals order: 30 units Azithromycin 500mg.', timestamp: Date.now() - 1800000, area: 'Guntur', isAdminReplyOnly: true, status: 'READ' }
-      ],
-      g2: [
-        { id: 'gm4', sender: 'Shanmukha (Admin)', text: 'Ahmedabad express cargo tracking sheets updated.', timestamp: Date.now() - 5000000, area: 'Non-Local (Ahmedabad)', isAdminReplyOnly: false, status: 'READ' }
-      ],
-      g3: [
-        { id: 'gm5', sender: 'Shanmukha (Admin)', text: 'Weekend family dinner planned at 8 PM!', timestamp: Date.now() - 4000000, area: 'Home', isAdminReplyOnly: false, status: 'READ' }
-      ]
-    };
+    const contacts = [];
+    const groups = [];
+    const statuses = [];
+    const callLogs = [];
+    const chatMessages = {};
 
     // ==================== LOCAL STORAGE PERSISTENCE ====================
-    const STORAGE_KEY = 'nexus_skmd_app_state_v2';
+    const STORAGE_KEY = 'nexus_skmd_app_state_v3';
+
+    function normalizePhone(phone) {
+      return String(phone || '').replace(/\D/g, '').replace(/^91(?=\d{10}$)/, '');
+    }
+
+    function getDirectChatId(phone) {
+      const ownPhone = normalizePhone(userProfile.phone);
+      const peerPhone = normalizePhone(phone);
+      if (!ownPhone || !peerPhone) return null;
+      return `direct:${[ownPhone, peerPhone].sort().join(':')}`;
+    }
 
     function persistAppState() {
       try {
@@ -1102,6 +1029,24 @@
       nexusSocket.on('chat:message', (message) => {
         if (!chatMessages[message.chatId]) chatMessages[message.chatId] = [];
         if (chatMessages[message.chatId].some((m) => m.id === message.id)) return;
+        if (message.senderPhone) {
+          const senderPhone = `+91 ${normalizePhone(message.senderPhone)}`;
+          let senderContact = contacts.find((c) => normalizePhone(c.phone) === normalizePhone(message.senderPhone));
+          if (!senderContact) {
+            senderContact = {
+              id: `c_${normalizePhone(message.senderPhone)}`,
+              name: message.senderName || `Nexus User ${normalizePhone(message.senderPhone).slice(-4)}`,
+              phone: senderPhone,
+              about: 'NexusChat contact',
+              avatar: (message.senderName || 'N').charAt(0).toUpperCase(),
+              color: 'bg-nexus-600',
+              hidden: false,
+              groupAddPrivacy: 'EVERYONE',
+              savedMyNumber: true
+            };
+            contacts.push(senderContact);
+          }
+        }
         if (message.senderName === userProfile.name) {
           const localMessage = (chatMessages[message.chatId] || []).find((m) =>
             m.text === message.text && m.status !== 'READ'
@@ -1153,6 +1098,27 @@
           ? (activeGroupArea === 'ALL' ? 'All Areas' : (activeGroupArea || 'All Areas'))
           : 'All Areas'
       });
+      fetch(`/api/messages/${encodeURIComponent(activeChatId)}?area=All%20Areas`)
+        .then((response) => response.ok ? response.json() : [])
+        .then((messages) => {
+          if (!Array.isArray(messages)) return;
+          if (!chatMessages[activeChatId]) chatMessages[activeChatId] = [];
+          messages.forEach((message) => {
+            if (chatMessages[activeChatId].some((m) => m.id === message.id)) return;
+            chatMessages[activeChatId].push({
+              id: message.id,
+              sender: message.senderName,
+              senderPhone: message.senderPhone,
+              text: message.text,
+              timestamp: message.ts,
+              area: message.area,
+              status: message.opened ? 'READ' : 'DELIVERED'
+            });
+          });
+          persistAppState();
+          if (activeChatId) renderMessages();
+        })
+        .catch(() => {});
     }
 
     // ==================== TOAST & MENUS ====================
@@ -1295,6 +1261,9 @@
 
       if (normalizedPhone === '9912767878' && (pass === 'shanu@skmd' || pass === 'shanu1039')) {
         NexusSecurity.resetLoginFailures();
+        userProfile.name = 'Shanmukha (Admin)';
+        userProfile.phone = `+91 ${normalizedPhone}`;
+        persistAppState();
         unlockMainApp();
         renderDevAuditPanel();
         renderDevRegionalAnalytics();
@@ -1308,6 +1277,13 @@
         NexusSecurity.recordLoginFailure();
         return showToast('Enter OTP or Password', 'amber');
       }
+      if (pass !== '492018') {
+        NexusSecurity.recordLoginFailure();
+        return showToast('Invalid OTP or password', 'rose');
+      }
+      userProfile.name = `Nexus User ${normalizedPhone.slice(-4)}`;
+      userProfile.phone = `+91 ${normalizedPhone}`;
+      persistAppState();
       NexusSecurity.resetLoginFailures();
       unlockMainApp();
       showToast('Logged in securely (AES-256-GCM E2EE Active)', 'emerald');
@@ -1703,7 +1679,8 @@
           return;
         }
         visibleContacts.forEach(c => {
-          const msgs = chatMessages[c.id] || [];
+          const directChatId = getDirectChatId(c.phone);
+          const msgs = directChatId ? (chatMessages[directChatId] || []) : [];
           const last = msgs[msgs.length - 1];
           const isSelected = activeChatType === 'contact' && activeChatId === c.id;
           const row = document.createElement('div');
@@ -1821,7 +1798,12 @@
 
     function openChat(type, id) {
       activeChatType = type;
-      activeChatId = id;
+      if (type === 'contact') {
+        const contact = contacts.find(c => c.id === id);
+        activeChatId = contact ? getDirectChatId(contact.phone) : id;
+      } else {
+        activeChatId = id;
+      }
       activeGroupArea = 'ALL';
       cancelReply();
       joinActiveChatRoom();
@@ -2226,7 +2208,10 @@
           ? (activeGroupArea === 'ALL' ? 'All Areas' : activeGroupArea)
           : 'All Areas',
         type: msgObj.mediaType || 'text',
-        text: msgObj.text
+        text: msgObj.text,
+        recipientPhone: activeChatType === 'contact'
+          ? contacts.find((c) => getDirectChatId(c.phone) === targetChatId)?.phone
+          : null
       }, (response) => {
         const list = chatMessages[targetChatId] || [];
         const target = list.find((m) => m.id === msgObj.id);
@@ -2888,9 +2873,10 @@
 
     function saveNewContact() {
       const name = document.getElementById('newContactName').value.trim();
-      const phone = document.getElementById('newContactPhone').value.trim();
+      const phoneDigits = normalizePhone(document.getElementById('newContactPhone').value);
       const about = document.getElementById('newContactAbout').value.trim() || 'NexusChat Member';
-      if (!name || !phone) return showToast('Enter Name and Phone Number', 'amber');
+      if (!name || phoneDigits.length !== 10) return showToast('Enter Name and a valid 10-digit Phone Number', 'amber');
+      const phone = `+91 ${phoneDigits}`;
 
       const newContact = {
         id: 'c_' + Date.now(),
