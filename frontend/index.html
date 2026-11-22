@@ -338,6 +338,7 @@
     <button onclick="openSettingsModal('privacy'); closeGroupChatDotsMenu();" class="w-full text-left px-4 py-2 hover:bg-slate-800 flex items-center gap-3"><i class="fa-solid fa-clock-rotate-left text-purple-400 w-4"></i> Disappearing messages</button>
     <button onclick="exportGroupOrdersCsv(activeChatId); closeGroupChatDotsMenu();" class="w-full text-left px-4 py-2 hover:bg-slate-800 flex items-center gap-3"><i class="fa-solid fa-file-export text-emerald-400 w-4"></i> Export chat / CSV</button>
     <button onclick="clearCurrentChat(); closeGroupChatDotsMenu();" class="w-full text-left px-4 py-2 hover:bg-slate-800 flex items-center gap-3 text-amber-400"><i class="fa-solid fa-ban w-4"></i> Clear chat</button>
+    <button onclick="deleteGroup(activeChatId); closeGroupChatDotsMenu();" class="w-full text-left px-4 py-2 hover:bg-rose-950/60 flex items-center gap-3 text-rose-400 font-semibold"><i class="fa-solid fa-trash w-4"></i> Delete group</button>
     <div class="my-1 border-t border-slate-800"></div>
     <button onclick="openExitGroupModal(activeChatId); closeGroupChatDotsMenu();" class="w-full text-left px-4 py-2 hover:bg-rose-950/60 flex items-center gap-3 text-rose-400 font-semibold"><i class="fa-solid fa-right-from-bracket w-4"></i> Exit group</button>
   </div>
@@ -417,9 +418,14 @@
         </div>
       </div>
       <div class="p-4 border-t border-slate-200 dark:border-slate-800 flex items-center justify-between">
-        <button onclick="openExitGroupModal(editingGroupId)" class="px-3 py-2 rounded-xl bg-rose-500/15 text-rose-500 font-semibold text-xs hover:bg-rose-500/25">
-          <i class="fa-solid fa-right-from-bracket mr-1"></i> Exit Group
-        </button>
+        <div class="flex gap-2">
+          <button onclick="openExitGroupModal(editingGroupId)" class="px-3 py-2 rounded-xl bg-rose-500/15 text-rose-500 font-semibold text-xs hover:bg-rose-500/25">
+            <i class="fa-solid fa-right-from-bracket mr-1"></i> Exit Group
+          </button>
+          <button onclick="deleteGroup(editingGroupId)" class="px-3 py-2 rounded-xl bg-rose-600/20 text-rose-400 border border-rose-500/40 font-semibold text-xs hover:bg-rose-600/30">
+            <i class="fa-solid fa-trash mr-1"></i> Delete Group
+          </button>
+        </div>
         <div class="flex gap-2">
           <button onclick="closeGroupSettingsModal()" class="px-4 py-2 text-xs text-slate-400">Cancel</button>
           <button onclick="saveGroupSettings()" class="btn-3d-embossed px-4 py-2 rounded-xl text-xs font-bold text-white">Save Group Settings</button>
@@ -2309,6 +2315,37 @@
       persistAppState();
       renderMessages();
       showToast('Chat messages cleared', 'blue');
+    }
+
+    function deleteGroup(groupId) {
+      if (!groupId) return;
+      const groupIndex = groups.findIndex(g => g.id === groupId);
+      if (groupIndex === -1) {
+        showToast('Group not found.', 'rose');
+        return;
+      }
+
+      const group = groups[groupIndex];
+      if (!window.confirm(`Delete "${group.name}" permanently?\n\nThis will remove the group and all of its message history.`)) {
+        return;
+      }
+
+      groups.splice(groupIndex, 1);
+      delete chatMessages[groupId];
+      persistAppState();
+      closeGroupSettingsModal();
+      closeGroupChatDotsMenu();
+
+      if (activeChatId === groupId) {
+        activeChatId = null;
+        activeChatType = null;
+        document.getElementById('rightChatPane')?.classList.remove('flex');
+        document.getElementById('rightChatPane')?.classList.add('hidden');
+        document.getElementById('leftSidebar')?.classList.remove('hidden');
+      }
+
+      renderSidebarList();
+      showToast(`Group "${group.name}" deleted.`, 'emerald');
     }
 
     // ==================== GROUP SETTINGS, 2-STEP SWITCH, EXIT PROTECTION & PRIVACY ====================
