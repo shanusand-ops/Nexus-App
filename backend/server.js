@@ -27,6 +27,26 @@ app.get('/api/messages/:chatId', async (req, res) => {
   res.json(rows);
 });
 
+app.post('/api/accounts/register', async (req, res) => {
+  const phone = String(req.body.phone || '').replace(/\D/g, '').replace(/^91(?=\d{10}$)/, '');
+  if (!/^\d{10}$/.test(phone)) return res.status(400).json({ error: 'A valid 10-digit phone number is required.' });
+  if (!String(req.body.name || '').trim()) return res.status(400).json({ error: 'Name is required.' });
+  const account = await db.upsertAccount({
+    phone,
+    name: req.body.name.trim(),
+    email: String(req.body.email || '').trim(),
+    address: String(req.body.address || '').trim(),
+    province: String(req.body.province || '').trim(),
+    photo: String(req.body.photo || '')
+  });
+  res.json({ account });
+});
+
+app.get('/api/accounts', async (req, res) => {
+  const accounts = await db.getAccounts();
+  res.json(accounts);
+});
+
 app.use(express.static(path.join(__dirname, '..', 'frontend', 'dist')));
 
 io.on('connection', (socket) => {

@@ -57,6 +57,31 @@
     <i class="fa-solid fa-triangle-exclamation mr-1.5"></i> SYSTEM MAINTENANCE MODE ACTIVE — Non-Admin Messaging Temporarily Paused
   </div>
 
+  <!-- PROFILE SETUP (SHOWN AFTER OTP) -->
+  <div id="profileSetupModal" class="hidden fixed inset-0 z-[8500] bg-slate-950/95 backdrop-blur-xl flex items-center justify-center p-4">
+    <div class="w-full max-w-md bg-slate-900 border border-slate-700 rounded-3xl p-6 shadow-2xl space-y-4">
+      <div class="text-center">
+        <div class="w-16 h-16 mx-auto rounded-2xl bg-nexus-600 flex items-center justify-center text-2xl text-white">
+          <i class="fa-solid fa-user-pen"></i>
+        </div>
+        <h2 class="text-xl font-extrabold text-white mt-3">Complete Your NexusChat Profile</h2>
+        <p class="text-xs text-slate-400 mt-1">Required before you can use chat.</p>
+      </div>
+      <div class="grid grid-cols-1 gap-3">
+        <input id="profileSetupName" type="text" placeholder="Full name" class="w-full bg-slate-950 border border-slate-700 rounded-xl px-3.5 py-2.5 text-sm text-white" />
+        <input id="profileSetupEmail" type="email" placeholder="Gmail address" class="w-full bg-slate-950 border border-slate-700 rounded-xl px-3.5 py-2.5 text-sm text-white" />
+        <input id="profileSetupAddress" type="text" placeholder="Address" class="w-full bg-slate-950 border border-slate-700 rounded-xl px-3.5 py-2.5 text-sm text-white" />
+        <input id="profileSetupProvince" type="text" placeholder="State / Province" class="w-full bg-slate-950 border border-slate-700 rounded-xl px-3.5 py-2.5 text-sm text-white" />
+        <label class="block text-xs text-slate-400">Profile photo
+          <input id="profileSetupPhoto" type="file" accept="image/*" class="mt-1 w-full text-xs text-slate-300" />
+        </label>
+      </div>
+      <button onclick="saveCompleteProfile()" class="w-full btn-3d-embossed py-3 rounded-xl font-bold text-sm text-white">
+        <i class="fa-solid fa-cloud-arrow-up mr-2"></i>Save & Open NexusChat
+      </button>
+    </div>
+  </div>
+
   <!-- SCREEN PRIVACY SHIELD (BLURS APP ON WINDOW/TAB SWITCH) -->
   <div id="screenPrivacyShield" class="hidden fixed inset-0 z-[11000] bg-slate-950/90 backdrop-blur-xl flex flex-col items-center justify-center text-white text-center p-6 pointer-events-none">
     <div class="w-16 h-16 rounded-2xl shield-3d flex items-center justify-center mb-3">
@@ -922,6 +947,10 @@
       phone: '',
       about: 'NexusChat User',
       email: '',
+      address: '',
+      province: '',
+      photo: '',
+      profileCompleted: false,
       username: '',
       appLockEnabled: false,
       appLockMethod: 'FINGERPRINT',
@@ -1021,6 +1050,7 @@
           state: 'Telangana'
         }, () => {});
         if (activeChatId) joinActiveChatRoom();
+        loadRegisteredAccounts();
         showToast('Live messaging connected', 'emerald');
       });
       nexusSocket.on('disconnect', () => {
@@ -1289,7 +1319,111 @@
       showToast('Logged in securely (AES-256-GCM E2EE Active)', 'emerald');
     }
 
+    function openProfileSetup() {
+      const modal = document.getElementById('profileSetupModal');
+      if (!modal) return;
+      document.getElementById('profileSetupName').value = userProfile.name && !userProfile.name.startsWith('Nexus User') ? userProfile.name : '';
+      document.getElementById('profileSetupEmail').value = userProfile.email || '';
+      document.getElementById('profileSetupAddress').value = userProfile.address || '';
+      document.getElementById('profileSetupProvince').value = userProfile.province || '';
+      modal.classList.remove('hidden');
+    }
+
+    async function saveCompleteProfile() {
+      const name = document.getElementById('profileSetupName').value.trim();
+      const email = document.getElementById('profileSetupEmail').value.trim();
+      const address = document.getElementById('profileSetupAddress').value.trim();
+      const province = document.getElementById('profileSetupProvince').value.trim();
+      if (!name) return showToast('Full name is required', 'rose');
+      if (!email || !email.toLowerCase().endsWith('@gmail.com')) return showToast('A valid Gmail address is required', 'rose');
+      if (!address) return showToast('Address is required', 'rose');
+      if (!province) return showToast('State / Province is required', 'rose');
+
+      const file = document.getElementById('profileSetupPhoto').files?.[0];
+      let photo = userProfile.photo || '';
+      if (file) {
+        if (file.size > 2 * 1024 * 1024) return showToast('Profile photo must be smaller than 2 MB', 'rose');
+        photo = await new Promise((resolve, reject) => {
+          const reader = new FileReader();
+          reader.onload = () => resolve(reader.result);
+          reader.onerror = reject;
+          reader.readAsDataURL(file);
+        });
+      }
+
+      userProfile.name = name;
+      userProfile.email = email;
+      userProfile.address = address;
+      userProfile.province = province;
+      userProfile.photo = photo;
+      userProfile.profileCompleted = true;
+      persistAppState();
+
+      try {
+        await fetch('/api/accounts/register', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            phone: userProfile.phone,
+            name,
+            email,
+            address,
+            province,
+            photo
+          })
+        }).then((response) => {
+          if (!response.ok) throw new Error('Account registration failed');
+        });
+      } catch (e) {
+        showToast('Profile saved locally, server registration failed', 'amber');
+      }
+
+      document.getElementById('profileSetupModal').classList.add('hidden');
+      localStorage.setItem('nexus_otp_verified', 'true');
+      document.getElementById('authLockScreen')?.classList.add('hidden');
+      document.getElementById('mainAppShell')?.classList.remove('hidden');
+      showToast('Profile complete and Gmail account linked', 'emerald');
+      initializeNexusSocket();
+      await loadRegisteredAccounts();
+      renderSidebarList();
+    }
+
+    async function loadRegisteredAccounts() {
+      try {
+        const response = await fetch('/api/accounts');
+        if (!response.ok) return;
+        const accounts = await response.json();
+        accounts.forEach((account) => {
+          const phone = `+91 ${normalizePhone(account.phone)}`;
+          if (normalizePhone(phone) === normalizePhone(userProfile.phone)) return;
+          const existing = contacts.find((contact) => normalizePhone(contact.phone) === normalizePhone(phone));
+          const registeredContact = {
+            id: existing?.id || `registered_${normalizePhone(account.phone)}`,
+            name: account.name,
+            phone,
+            about: account.address ? `${account.address}${account.province ? ' • ' + account.province : ''}` : 'Registered NexusChat user',
+            avatar: account.name?.charAt(0).toUpperCase() || 'N',
+            color: 'bg-cyan-600',
+            hidden: false,
+            groupAddPrivacy: 'EVERYONE',
+            savedMyNumber: true,
+            gmail: account.email,
+            registered: true
+          };
+          if (existing) Object.assign(existing, registeredContact);
+          else contacts.unshift(registeredContact);
+        });
+        persistAppState();
+        renderSidebarList();
+      } catch (e) {}
+    }
+
     function unlockMainApp() {
+      if (!userProfile.profileCompleted) {
+        document.getElementById('authLockScreen')?.classList.add('hidden');
+        openProfileSetup();
+        return;
+      }
       localStorage.setItem('nexus_otp_verified', 'true');
       document.getElementById('authLockScreen').classList.add('hidden');
       document.getElementById('mainAppShell').classList.remove('hidden');
@@ -2871,12 +3005,23 @@
       document.getElementById('newContactModal').classList.add('hidden');
     }
 
-    function saveNewContact() {
-      const name = document.getElementById('newContactName').value.trim();
+    async function saveNewContact() {
+      let name = document.getElementById('newContactName').value.trim();
       const phoneDigits = normalizePhone(document.getElementById('newContactPhone').value);
       const about = document.getElementById('newContactAbout').value.trim() || 'NexusChat Member';
       if (!name || phoneDigits.length !== 10) return showToast('Enter Name and a valid 10-digit Phone Number', 'amber');
       const phone = `+91 ${phoneDigits}`;
+
+      try {
+        const response = await fetch('/api/accounts');
+        const accounts = response.ok ? await response.json() : [];
+        const registered = accounts.find((account) => normalizePhone(account.phone) === phoneDigits);
+        if (!registered) return showToast('This mobile number is not registered on NexusChat', 'rose');
+        name = registered.name;
+        about = registered.address ? `${registered.address}${registered.province ? ' • ' + registered.province : ''}` : about;
+      } catch (e) {
+        return showToast('Unable to verify the registered account', 'rose');
+      }
 
       const newContact = {
         id: 'c_' + Date.now(),

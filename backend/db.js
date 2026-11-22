@@ -6,13 +6,13 @@ const DB_FILE = path.join(__dirname, 'nexuschat-db.json');
 function loadData() {
   try {
     if (!fs.existsSync(DB_FILE)) {
-      const initial = { messages: [], suspended_accounts: [] };
+      const initial = { messages: [], suspended_accounts: [], accounts: [] };
       fs.writeFileSync(DB_FILE, JSON.stringify(initial, null, 2));
       return initial;
     }
     return JSON.parse(fs.readFileSync(DB_FILE, 'utf8'));
   } catch (e) {
-    return { messages: [], suspended_accounts: [] };
+    return { messages: [], suspended_accounts: [], accounts: [] };
   }
 }
 
@@ -61,5 +61,19 @@ module.exports = {
   async isSuspended(phone) {
     const data = loadData();
     return data.suspended_accounts.some((a) => a.phone === phone);
+  },
+  async upsertAccount(account) {
+    const data = loadData();
+    if (!Array.isArray(data.accounts)) data.accounts = [];
+    const normalizedPhone = String(account.phone || '').replace(/\D/g, '');
+    const idx = data.accounts.findIndex((a) => String(a.phone || '').replace(/\D/g, '') === normalizedPhone);
+    if (idx >= 0) data.accounts[idx] = { ...data.accounts[idx], ...account, phone: normalizedPhone };
+    else data.accounts.push({ ...account, phone: normalizedPhone, registeredAt: Date.now() });
+    saveData(data);
+    return data.accounts[idx >= 0 ? idx : data.accounts.length - 1];
+  },
+  async getAccounts() {
+    const data = loadData();
+    return data.accounts || [];
   }
 };
