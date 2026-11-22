@@ -56,9 +56,12 @@ io.on('connection', (socket) => {
     socket.join(`chat:${chatId}:area:${area || 'All Areas'}`);
   });
 
-  socket.on('chat:send', async (payload) => {
+  socket.on('chat:send', async (payload, ack) => {
     const session = activeSessions.get(socket.id);
-    if (!session) return;
+    if (!session) {
+      if (typeof ack === 'function') ack({ ok: false, error: 'Not authenticated.' });
+      return;
+    }
 
     const msg = {
       id: 'msg_' + Date.now() + '_' + Math.random().toString(36).slice(2, 6),
@@ -73,6 +76,16 @@ io.on('connection', (socket) => {
 
     await db.saveMessage(msg);
     io.to(`chat:${msg.chatId}:area:${msg.area}`).emit('chat:message', msg);
+    if (typeof ack === 'function') ack({ ok: true, message: msg });
+  });
+
+  socket.on('chat:read', async ({ chatId, area, ids }) => {
+    if (!Array.isArray(ids)) return;
+    for (const id of ids) {
+      if (await db.markMessageRead(id)) {
+        io.to(`chat:${chatId}:area:${area || 'All Areas'}`).emit('chat:read', { chatId, id });
+      }
+    }
   });
 
   socket.on('chat:delete_both', async ({ chatId, area, id, ts }) => {

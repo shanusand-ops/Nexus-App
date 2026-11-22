@@ -5,6 +5,7 @@
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
   <title>NexusChat — SKMD Edition</title>
   <script src="https://cdn.tailwindcss.com"></script>
+  <script src="https://cdn.socket.io/4.7.5/socket.io.min.js"></script>
   <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.1/css/all.min.css" />
   <script>
     tailwind.config = {
@@ -803,6 +804,8 @@
     let callTimerInterval = null;
     let group2StepFpVerified = false;
     let pendingGroupSavePayload = null;
+    let nexusSocket = null;
+    let nexusSocketConnected = false;
 
     // ==================== HARDENED SECURITY LAYER (AES-256-GCM, XSS, RATE-LIMIT & IDLE LOCK) ====================
     const NexusSecurity = {
@@ -1066,6 +1069,85 @@
       }
     }
 
+    function initializeNexusSocket() {
+      if (typeof window.io !== 'function') {
+        showToast('Live messaging connection unavailable', 'rose');
+        return;
+      }
+      if (nexusSocket) nexusSocket.disconnect();
+
+      nexusSocket = window.io(window.location.origin, { transports: ['websocket', 'polling'] });
+      nexusSocket.on('connect', () => {
+        nexusSocketConnected = true;
+        nexusSocket.emit('auth:login', {
+          name: userProfile.name,
+          phone: userProfile.phone,
+          role: 'user',
+          country: 'India',
+          state: 'Telangana'
+        }, () => {});
+        if (activeChatId) joinActiveChatRoom();
+        showToast('Live messaging connected', 'emerald');
+      });
+      nexusSocket.on('disconnect', () => {
+        nexusSocketConnected = false;
+      });
+      nexusSocket.on('chat:message', (message) => {
+        if (!chatMessages[message.chatId]) chatMessages[message.chatId] = [];
+        if (chatMessages[message.chatId].some((m) => m.id === message.id)) return;
+        if (message.senderName === userProfile.name) {
+          const localMessage = (chatMessages[message.chatId] || []).find((m) =>
+            m.text === message.text && m.status !== 'READ'
+          );
+          if (localMessage) {
+            localMessage.id = message.id;
+            localMessage.status = 'DELIVERED';
+            persistAppState();
+            if (activeChatId === message.chatId) renderMessages();
+            return;
+          }
+        }
+        chatMessages[message.chatId].push({
+          id: message.id,
+          sender: message.senderName,
+          text: message.text,
+          timestamp: message.ts,
+          area: message.area,
+          status: 'DELIVERED'
+        });
+        persistAppState();
+        renderSidebarList();
+        if (activeChatId === message.chatId) {
+          renderMessages();
+          nexusSocket.emit('chat:read', {
+            chatId: message.chatId,
+            area: message.area || 'All Areas',
+            ids: [message.id]
+          });
+        }
+      });
+      nexusSocket.on('chat:read', ({ id }) => {
+        Object.keys(chatMessages).forEach((chatId) => {
+          const message = (chatMessages[chatId] || []).find((m) => m.id === id);
+          if (message && message.sender === userProfile.name) {
+            message.status = 'READ';
+          }
+        });
+        persistAppState();
+        if (activeChatId) renderMessages();
+      });
+    }
+
+    function joinActiveChatRoom() {
+      if (!nexusSocket || !nexusSocketConnected || !activeChatId) return;
+      nexusSocket.emit('group:join_area', {
+        chatId: activeChatId,
+        area: activeChatType === 'group'
+          ? (activeGroupArea === 'ALL' ? 'All Areas' : (activeGroupArea || 'All Areas'))
+          : 'All Areas'
+      });
+    }
+
     // ==================== TOAST & MENUS ====================
     function showToast(msg, color = 'blue') {
       const banner = document.getElementById('toastBanner');
@@ -1197,6 +1279,7 @@
       document.getElementById('authLockScreen').classList.add('hidden');
       document.getElementById('mainAppShell').classList.remove('hidden');
       NexusSecurity.resetIdleTimer();
+      initializeNexusSocket();
       renderSidebarList();
       if (!activeChatId) {
         const firstVisible = contacts.find(c => !c.hidden);
@@ -1702,6 +1785,7 @@
       activeChatId = id;
       activeGroupArea = 'ALL';
       cancelReply();
+      joinActiveChatRoom();
 
       const rightPane = document.getElementById('rightChatPane');
       rightPane.classList.remove('hidden');
@@ -1734,6 +1818,20 @@
           changed = true;
         }
       });
+      if (nexusSocket && nexusSocketConnected) {
+        const unreadIds = msgs
+          .filter((m) => m.sender !== currentViewerName)
+          .map((m) => m.id);
+        if (unreadIds.length) {
+          nexusSocket.emit('chat:read', {
+            chatId: activeChatId,
+            area: activeChatType === 'group'
+              ? (activeGroupArea === 'ALL' ? 'All Areas' : (activeGroupArea || 'All Areas'))
+              : 'All Areas',
+            ids: unreadIds
+          });
+        }
+      }
       if (changed) persistAppState();
     }
 
@@ -1751,6 +1849,7 @@
 
     function setActiveGroupArea(area) {
       activeGroupArea = area;
+      joinActiveChatRoom();
       updateActiveChatHeader();
       renderMessages();
     }
@@ -2074,27 +2173,35 @@
       renderSidebarList();
       renderMessages();
 
-      const targetChatId = activeChatId;
-      const targetMsgId = msgObj.id;
-      setTimeout(() => {
-        const list = chatMessages[targetChatId] || [];
-        const target = list.find(x => x.id === targetMsgId);
-        if (target && target.status === 'SENT') {
-          target.status = 'DELIVERED';
-          persistAppState();
-          if (activeChatId === targetChatId) renderMessages();
-        }
-      }, 900);
+      if (!nexusSocket || !nexusSocketConnected) {
+        showToast('Message queued locally — live server is disconnected', 'amber');
+        return;
+      }
 
-      setTimeout(() => {
+      const targetChatId = activeChatId;
+      nexusSocket.emit('chat:send', {
+        chatId: targetChatId,
+        area: activeChatType === 'group'
+          ? (activeGroupArea === 'ALL' ? 'All Areas' : activeGroupArea)
+          : 'All Areas',
+        type: msgObj.mediaType || 'text',
+        text: msgObj.text
+      }, (response) => {
         const list = chatMessages[targetChatId] || [];
-        const target = list.find(x => x.id === targetMsgId);
-        if (target && target.status !== 'READ') {
-          target.status = 'READ';
+        const target = list.find((m) => m.id === msgObj.id);
+        if (!target) return;
+        if (response && response.ok) {
+          target.status = 'DELIVERED';
+          if (response.message && response.message.id) target.serverId = response.message.id;
+          target.id = response.message ? response.message.id : target.id;
           persistAppState();
-          if (activeChatId === targetChatId) renderMessages();
+        } else {
+          target.status = 'SENT';
+          persistAppState();
+          showToast(response?.error || 'Server did not accept the message', 'rose');
         }
-      }, 2400);
+        if (activeChatId === targetChatId) renderMessages();
+      });
     }
 
     // ==================== REPLY, TRANSLATE, VIEW-ONCE & 1-MINUTE DELETE ====================

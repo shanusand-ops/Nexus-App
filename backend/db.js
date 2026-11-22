@@ -50,6 +50,14 @@ module.exports = {
     data.messages = data.messages.filter((m) => m.id !== id);
     saveData(data);
   },
+  async markMessageRead(id) {
+    const data = loadData();
+    const message = data.messages.find((m) => m.id === id);
+    if (!message) return false;
+    message.opened = 1;
+    saveData(data);
+    return true;
+  },
   async isSuspended(phone) {
     const data = loadData();
     return data.suspended_accounts.some((a) => a.phone === phone);
