@@ -333,6 +333,7 @@
   <!-- GROUP CHAT 3-DOTS SHORTCUT MENU (TOP LAYER) -->
   <div id="groupChatDotsMenu" class="hidden fixed right-4 top-14 w-56 bg-slate-900 border border-slate-700 rounded-2xl shadow-2xl z-[9999] py-1.5 text-xs text-slate-200">
     <button onclick="openAddMemberPickerModal(); closeGroupChatDotsMenu();" class="w-full text-left px-4 py-2 hover:bg-slate-800 flex items-center gap-3"><i class="fa-solid fa-user-plus text-nexus-500 w-4"></i> Add member</button>
+    <button onclick="openEditGroupModal(activeChatId); closeGroupChatDotsMenu();" class="w-full text-left px-4 py-2 hover:bg-slate-800 flex items-center gap-3"><i class="fa-solid fa-user-xmark text-rose-400 w-4"></i> Manage / remove members</button>
     <button onclick="openEditGroupModal(activeChatId); closeGroupChatDotsMenu();" class="w-full text-left px-4 py-2 hover:bg-slate-800 flex items-center gap-3"><i class="fa-solid fa-circle-info text-cyan-400 w-4"></i> Group info & Settings</button>
     <button onclick="showToast('Notifications muted for 8 hours', 'blue'); closeGroupChatDotsMenu();" class="w-full text-left px-4 py-2 hover:bg-slate-800 flex items-center gap-3"><i class="fa-solid fa-bell-slash text-amber-400 w-4"></i> Mute notifications</button>
     <button onclick="openSettingsModal('privacy'); closeGroupChatDotsMenu();" class="w-full text-left px-4 py-2 hover:bg-slate-800 flex items-center gap-3"><i class="fa-solid fa-clock-rotate-left text-purple-400 w-4"></i> Disappearing messages</button>
@@ -1179,7 +1180,39 @@
     function toggleGroupChatDotsMenu(e) {
       e.stopPropagation();
       closeDotsMenu();
-      document.getElementById('groupChatDotsMenu').classList.toggle('hidden');
+      const menu = document.getElementById('groupChatDotsMenu');
+      if (!menu) return;
+      renderChatDotsMenu();
+      menu.classList.toggle('hidden');
+    }
+
+    function renderChatDotsMenu() {
+      const menu = document.getElementById('groupChatDotsMenu');
+      if (!menu) return;
+
+      if (activeChatType === 'group') {
+        const group = groups.find(g => g.id === activeChatId);
+        if (!group) return;
+        menu.innerHTML = `
+          <button onclick="openAddMemberPickerModal(); closeGroupChatDotsMenu();" class="w-full text-left px-4 py-2 hover:bg-slate-800 flex items-center gap-3"><i class="fa-solid fa-user-plus text-nexus-500 w-4"></i> Add member</button>
+          <button onclick="openEditGroupModal(activeChatId); closeGroupChatDotsMenu();" class="w-full text-left px-4 py-2 hover:bg-slate-800 flex items-center gap-3"><i class="fa-solid fa-user-xmark text-rose-400 w-4"></i> Manage / remove members</button>
+          <button onclick="openEditGroupModal(activeChatId); closeGroupChatDotsMenu();" class="w-full text-left px-4 py-2 hover:bg-slate-800 flex items-center gap-3"><i class="fa-solid fa-circle-info text-cyan-400 w-4"></i> Group info & settings</button>
+          <button onclick="showToast('Notifications muted for 8 hours', 'blue'); closeGroupChatDotsMenu();" class="w-full text-left px-4 py-2 hover:bg-slate-800 flex items-center gap-3"><i class="fa-solid fa-bell-slash text-amber-400 w-4"></i> Mute notifications</button>
+          <button onclick="openSettingsModal('privacy'); closeGroupChatDotsMenu();" class="w-full text-left px-4 py-2 hover:bg-slate-800 flex items-center gap-3"><i class="fa-solid fa-clock-rotate-left text-purple-400 w-4"></i> Disappearing messages</button>
+          <button onclick="exportGroupOrdersCsv(activeChatId); closeGroupChatDotsMenu();" class="w-full text-left px-4 py-2 hover:bg-slate-800 flex items-center gap-3"><i class="fa-solid fa-file-export text-emerald-400 w-4"></i> Export chat / CSV</button>
+          <button onclick="clearCurrentChat(); closeGroupChatDotsMenu();" class="w-full text-left px-4 py-2 hover:bg-slate-800 flex items-center gap-3 text-amber-400"><i class="fa-solid fa-ban w-4"></i> Clear chat</button>
+          <div class="my-1 border-t border-slate-800"></div>
+          <button onclick="deleteGroup(activeChatId); closeGroupChatDotsMenu();" class="w-full text-left px-4 py-2 hover:bg-rose-950/60 flex items-center gap-3 text-rose-400 font-semibold"><i class="fa-solid fa-trash w-4"></i> Delete group</button>
+          <button onclick="openExitGroupModal(activeChatId); closeGroupChatDotsMenu();" class="w-full text-left px-4 py-2 hover:bg-rose-950/60 flex items-center gap-3 text-rose-400 font-semibold"><i class="fa-solid fa-right-from-bracket w-4"></i> Exit group</button>
+        `;
+        return;
+      }
+
+      menu.innerHTML = `
+        <button onclick="openSettingsModal('privacy'); closeGroupChatDotsMenu();" class="w-full text-left px-4 py-2 hover:bg-slate-800 flex items-center gap-3"><i class="fa-solid fa-clock-rotate-left text-purple-400 w-4"></i> Disappearing messages</button>
+        <button onclick="showToast('Notifications muted for 8 hours', 'blue'); closeGroupChatDotsMenu();" class="w-full text-left px-4 py-2 hover:bg-slate-800 flex items-center gap-3"><i class="fa-solid fa-bell-slash text-amber-400 w-4"></i> Mute notifications</button>
+        <button onclick="clearCurrentChat(); closeGroupChatDotsMenu();" class="w-full text-left px-4 py-2 hover:bg-slate-800 flex items-center gap-3 text-amber-400"><i class="fa-solid fa-ban w-4"></i> Clear chat</button>
+      `;
     }
 
     function closeGroupChatDotsMenu() {
@@ -1895,6 +1928,7 @@
         actionsEl.innerHTML = `
           <button onclick="startSimulatedCall('${NexusSecurity.sanitize(c.name)}', 'VOICE')" class="w-9 h-9 rounded-xl bg-slate-100 dark:bg-slate-800 hover:bg-slate-200 dark:hover:bg-slate-700 flex items-center justify-center text-slate-600 dark:text-slate-300"><i class="fa-solid fa-phone text-xs"></i></button>
           <button onclick="startSimulatedCall('${NexusSecurity.sanitize(c.name)}', 'VIDEO')" class="w-9 h-9 rounded-xl bg-slate-100 dark:bg-slate-800 hover:bg-slate-200 dark:hover:bg-slate-700 flex items-center justify-center text-slate-600 dark:text-slate-300"><i class="fa-solid fa-video text-xs"></i></button>
+          <button id="groupChatDotsBtn" onclick="toggleGroupChatDotsMenu(event)" class="w-9 h-9 rounded-xl bg-slate-100 dark:bg-slate-800 hover:bg-slate-700 flex items-center justify-center text-slate-600 dark:text-slate-300"><i class="fa-solid fa-ellipsis-vertical text-xs"></i></button>
         `;
       } else if (activeChatType === 'group') {
         const g = groups.find(x => x.id === activeChatId);
@@ -1907,6 +1941,7 @@
           subEl.textContent = `Recipients: ${g.members.map(m => m.name).join(', ')}`;
           actionsEl.innerHTML = `
             <button onclick="clearCurrentChat()" title="Clear Broadcast History" class="w-9 h-9 rounded-xl bg-slate-100 dark:bg-slate-800 flex items-center justify-center text-slate-400 hover:text-rose-400"><i class="fa-solid fa-trash text-xs"></i></button>
+            <button id="groupChatDotsBtn" onclick="toggleGroupChatDotsMenu(event)" class="w-9 h-9 rounded-xl bg-slate-100 dark:bg-slate-800 hover:bg-slate-700 flex items-center justify-center text-slate-300"><i class="fa-solid fa-ellipsis-vertical text-xs"></i></button>
           `;
           return;
         }
