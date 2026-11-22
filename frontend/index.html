@@ -76,7 +76,7 @@
           <input id="profileSetupPhoto" type="file" accept="image/*" class="mt-1 w-full text-xs text-slate-300" />
         </label>
       </div>
-      <button onclick="saveCompleteProfile()" class="w-full btn-3d-embossed py-3 rounded-xl font-bold text-sm text-white">
+      <button id="profileSetupSaveBtn" onclick="saveCompleteProfile()" class="w-full btn-3d-embossed py-3 rounded-xl font-bold text-sm text-white">
         <i class="fa-solid fa-cloud-arrow-up mr-2"></i>Save & Open NexusChat
       </button>
     </div>
@@ -1330,6 +1330,7 @@
     }
 
     async function saveCompleteProfile() {
+      const saveButton = document.getElementById('profileSetupSaveBtn');
       const name = document.getElementById('profileSetupName').value.trim();
       const email = document.getElementById('profileSetupEmail').value.trim();
       const address = document.getElementById('profileSetupAddress').value.trim();
@@ -1338,11 +1339,21 @@
       if (!email || !email.toLowerCase().endsWith('@gmail.com')) return showToast('A valid Gmail address is required', 'rose');
       if (!address) return showToast('Address is required', 'rose');
       if (!province) return showToast('State / Province is required', 'rose');
+      if (saveButton) {
+        saveButton.disabled = true;
+        saveButton.innerHTML = '<i class="fa-solid fa-spinner fa-spin mr-2"></i>Registering Account...';
+      }
 
       const file = document.getElementById('profileSetupPhoto').files?.[0];
       let photo = userProfile.photo || '';
       if (file) {
-        if (file.size > 2 * 1024 * 1024) return showToast('Profile photo must be smaller than 2 MB', 'rose');
+        if (file.size > 2 * 1024 * 1024) {
+          if (saveButton) {
+            saveButton.disabled = false;
+            saveButton.innerHTML = '<i class="fa-solid fa-cloud-arrow-up mr-2"></i>Save & Open NexusChat';
+          }
+          return showToast('Profile photo must be smaller than 2 MB', 'rose');
+        }
         photo = await new Promise((resolve, reject) => {
           const reader = new FileReader();
           reader.onload = () => resolve(reader.result);
@@ -1358,9 +1369,12 @@
       userProfile.photo = photo;
 
       try {
+        const registrationTimeout = new AbortController();
+        const timeoutId = setTimeout(() => registrationTimeout.abort(), 12000);
         const registrationResponse = await fetch('/api/accounts/register', {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
+          signal: registrationTimeout.signal,
           body: JSON.stringify({
             phone: userProfile.phone,
             name,
@@ -1370,12 +1384,19 @@
             photo
           })
         });
+        clearTimeout(timeoutId);
         if (!registrationResponse.ok) {
           const error = await registrationResponse.json().catch(() => ({}));
           throw new Error(error.error || 'Account registration failed');
         }
       } catch (e) {
-        showToast(e.message || 'Server registration failed. Please try again.', 'rose');
+        if (saveButton) {
+          saveButton.disabled = false;
+          saveButton.innerHTML = '<i class="fa-solid fa-cloud-arrow-up mr-2"></i>Save & Open NexusChat';
+        }
+        showToast(e.name === 'AbortError'
+          ? 'Server is taking too long. Please try again.'
+          : (e.message || 'Server registration failed. Please try again.'), 'rose');
         return;
       }
 
