@@ -1356,11 +1356,9 @@
       userProfile.address = address;
       userProfile.province = province;
       userProfile.photo = photo;
-      userProfile.profileCompleted = true;
-      persistAppState();
 
       try {
-        await fetch('/api/accounts/register', {
+        const registrationResponse = await fetch('/api/accounts/register', {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
           body: JSON.stringify({
@@ -1371,13 +1369,18 @@
             province,
             photo
           })
-        }).then((response) => {
-          if (!response.ok) throw new Error('Account registration failed');
         });
+        if (!registrationResponse.ok) {
+          const error = await registrationResponse.json().catch(() => ({}));
+          throw new Error(error.error || 'Account registration failed');
+        }
       } catch (e) {
-        showToast('Profile saved locally, server registration failed', 'amber');
+        showToast(e.message || 'Server registration failed. Please try again.', 'rose');
+        return;
       }
 
+      userProfile.profileCompleted = true;
+      persistAppState();
       document.getElementById('profileSetupModal').classList.add('hidden');
       localStorage.setItem('nexus_otp_verified', 'true');
       document.getElementById('authLockScreen')?.classList.add('hidden');

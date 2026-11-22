@@ -7,7 +7,7 @@ const db = require('./db');
 
 const app = express();
 app.use(cors());
-app.use(express.json());
+app.use(express.json({ limit: '5mb' }));
 
 const server = http.createServer(app);
 const io = new Server(server, {
@@ -44,7 +44,23 @@ app.post('/api/accounts/register', async (req, res) => {
 
 app.get('/api/accounts', async (req, res) => {
   const accounts = await db.getAccounts();
-  res.json(accounts);
+  const activeAccounts = Array.from(activeSessions.values()).map((session) => ({
+    phone: String(session.phone || '').replace(/\D/g, '').replace(/^91(?=\d{10}$)/, ''),
+    name: session.name,
+    email: '',
+    address: '',
+    province: '',
+    registeredAt: null,
+    online: true
+  }));
+
+  const byPhone = new Map();
+  accounts.forEach((account) => byPhone.set(String(account.phone || '').replace(/\D/g, '').replace(/^91(?=\d{10}$)/, ''), account));
+  activeAccounts.forEach((account) => {
+    if (account.phone) byPhone.set(account.phone, { ...byPhone.get(account.phone), ...account });
+  });
+
+  res.json(Array.from(byPhone.values()).filter((account) => account.phone));
 });
 
 app.use(express.static(path.join(__dirname, '..', 'frontend', 'dist')));
