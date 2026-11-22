@@ -93,7 +93,7 @@
         <p id="loginPhoneErrorHint" class="hidden text-[11px] text-rose-500 font-semibold"><i class="fa-solid fa-circle-exclamation mr-1"></i>Please enter a complete 10-digit mobile number.</p>
         <div id="otpVerifyBox" class="space-y-2">
           <label class="block text-[11px] font-semibold uppercase tracking-wider text-slate-400">OTP / Security Passcode</label>
-          <input id="loginOtpInput" type="password" value="" placeholder="Enter 6-digit OTP or Password" class="w-full bg-slate-950 border border-slate-700 rounded-xl px-3.5 py-2.5 text-sm text-white focus:outline-none focus:border-nexus-500" />
+          <input id="loginOtpInput" type="password" value="123654" placeholder="Enter 6-digit OTP or Password" class="w-full bg-slate-950 border border-slate-700 rounded-xl px-3.5 py-2.5 text-sm text-white focus:outline-none focus:border-nexus-500" />
         </div>
         <button onclick="handleLoginSubmit()" class="w-full btn-3d-embossed py-3 rounded-xl font-bold text-sm text-white flex items-center justify-center gap-2">
           <i class="fa-solid fa-right-to-bracket"></i> Verify & Enter NexusChat
@@ -1238,8 +1238,8 @@
         }
         return showToast('Enter a valid 10-digit mobile number first!', 'rose');
       }
-      document.getElementById('loginOtpInput').value = '492018';
-      showToast('Simulated OTP sent: 492018', 'emerald');
+      document.getElementById('loginOtpInput').value = '123654';
+      showToast('Simulated OTP sent: 123654', 'emerald');
     }
 
     function handleLoginSubmit() {
@@ -1277,7 +1277,7 @@
         NexusSecurity.recordLoginFailure();
         return showToast('Enter OTP or Password', 'amber');
       }
-      if (pass !== '492018') {
+      if (pass !== '123654') {
         NexusSecurity.recordLoginFailure();
         return showToast('Invalid OTP or password', 'rose');
       }
