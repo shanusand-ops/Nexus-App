@@ -1,5 +1,6 @@
 const express = require('express');
 const http = require('http');
+const path = require('path');
 const { Server } = require('socket.io');
 const cors = require('cors');
 const db = require('./db');
@@ -26,12 +27,17 @@ app.get('/api/messages/:chatId', async (req, res) => {
   res.json(rows);
 });
 
+app.use(express.static(path.join(__dirname, '..', 'frontend', 'dist')));
+
 io.on('connection', (socket) => {
   socket.on('auth:login', async ({ name, phone, role, devKey, country, state }) => {
     if (await db.isSuspended(phone)) {
       return socket.emit('auth:error', { message: 'This account is suspended.' });
     }
-    const isDeveloper = role === 'developer' && devKey === (process.env.DEV_KEY || '123456');
+    const isDeveloper = role === 'developer' && devKey === process.env.DEV_KEY;
+    if (role === 'developer' && !isDeveloper) {
+      return socket.emit('auth:error', { message: 'Invalid developer passkey.' });
+    }
     const session = {
       socketId: socket.id,
       name: name || 'SKMD User',

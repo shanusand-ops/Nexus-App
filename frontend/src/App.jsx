@@ -1,7 +1,7 @@
 import React, { useState, useEffect, useRef } from 'react';
 import { io } from 'socket.io-client';
 
-const SOCKET_URL = 'http://localhost:4000';
+const SOCKET_URL = import.meta.env.DEV ? 'http://localhost:4000' : window.location.origin;
 
 const GLOBAL_USER_DIRECTORY = {
   Worldwide: {
@@ -109,7 +109,7 @@ export default function App() {
   const [name, setName] = useState('SKMD Admin');
   const [phone, setPhone] = useState('+91 98480 12345');
   const [devId, setDevId] = useState('DEV-OWNER-01');
-  const [devKey, setDevKey] = useState('123456');
+  const [devKey, setDevKey] = useState('');
 
   // UI Accessibility & Security Modes
   const [largeText, setLargeText] = useState(false);
@@ -239,7 +239,7 @@ export default function App() {
       socketRef.current.emit('auth:login', payload);
     } else {
       // Offline fallback if backend server isn't started yet
-      const isDev = loginRole === 'developer' && devKey === '123456';
+      const isDev = false;
       setUser({ ...payload, isDeveloper: isDev });
       notify('Logged in (Start START_BACKEND.bat for multi-device live sync)');
     }
@@ -450,7 +450,7 @@ export default function App() {
                 <input value={devId} onChange={(e) => setDevId(e.target.value)} className="w-full px-4 py-3 rounded-xl bg-slate-800 border border-slate-600 text-white text-sm font-mono font-bold" />
               </div>
               <div>
-                <label className="block text-xs font-bold text-slate-300 mb-1">Master Passkey (123456)</label>
+                <label className="block text-xs font-bold text-slate-300 mb-1">Master Passkey</label>
                 <input type="password" value={devKey} onChange={(e) => setDevKey(e.target.value)} className="w-full px-4 py-3 rounded-xl bg-slate-800 border border-amber-500 text-white text-sm font-mono font-bold" />
               </div>
               <button type="submit" className="w-full py-3 rounded-xl bg-amber-500 hover:bg-amber-400 text-slate-950 text-sm font-extrabold shadow-lg">
